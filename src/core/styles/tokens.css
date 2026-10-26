@@ -21,6 +21,11 @@
   --color-soon: #f2a900;
   --color-overdue: #e5484d;
   --color-inspect: #8b8f99;
+  /* the same statuses as text: darker in light mode so small labels reach 4.5:1 */
+  --color-ok-ink: var(--color-ok);
+  --color-soon-ink: var(--color-soon);
+  --color-overdue-ink: var(--color-overdue);
+  --color-inspect-ink: var(--color-inspect);
 
   /* categorical series for charts: fixed order, never cycled (validated palette, dark steps) */
   --series-1: #3987e5;
@@ -75,6 +80,10 @@
     --color-border: #dcdde3;
     --color-text: #15161a;
     --color-text-muted: #5f6470;
+    --color-ok-ink: #0f7a43;
+    --color-soon-ink: #8a5800;
+    --color-overdue-ink: #c1272d;
+    --color-inspect-ink: #5f6470;
     --series-1: #2a78d6;
     --series-2: #eb6834;
     --series-3: #1baf7a;

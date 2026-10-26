@@ -65,9 +65,10 @@ export function Dashboard() {
           </div>
           <HealthRing score={due.health} worst={worstStatus(due.items)} />
         </div>
-        <button type="button" class="odo-button" onClick={() => ui.openSheet({ type: 'odometer' })} aria-label="Update odometer">
+        <button type="button" class="odo-button" onClick={() => ui.openSheet({ type: 'odometer' })}>
           <OdometerDisplay value={mileage.miles} />
           <span class="odo-unit muted">{vehicle.units}{mileage.isEstimated ? ' · est.' : ''}</span>
+          <span class="visually-hidden">, tap to update odometer</span>
         </button>
         {sync.description && (
           <a class={`sync-line sync-${sync.description.tone}`} href={hrefFor('settings')} aria-label={`Cloud sync: ${sync.description.label}`}>
@@ -93,7 +94,7 @@ export function Dashboard() {
             <strong>{i.name}</strong>
             <StatusChip status={i.status} unknown={i.unknownBaseline} />
           </div>
-          <ProgressBar progress={i.progress} status={i.status} />
+          <ProgressBar progress={i.progress} status={i.status} label={`${i.name}: ${Math.round(Math.min(1, i.progress) * 100)}% of interval used`} />
           <div class="item-card-bottom muted">
             <span>{remainingLabel(i, vehicle.units)}</span>
             {i.projectedDate && !i.unknownBaseline && <span>around {fmtDateShort(i.projectedDate)}</span>}

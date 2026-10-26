@@ -11,7 +11,7 @@ export function Fab() {
   return (
     <>
       {open && <div class="fab-scrim" onClick={() => setOpen(false)} />}
-      <div class="fab-wrap">
+      <aside class="fab-wrap" aria-label="Quick add">
         {open && (
           <div class="fab-menu" role="menu">
             <button type="button" role="menuitem" onClick={pick(() => ui.openSheet({ type: 'log' }))}>Log service</button>
@@ -22,7 +22,7 @@ export function Fab() {
         <button type="button" class="fab" aria-label="Add" aria-expanded={open} onClick={() => setOpen(!open)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
         </button>
-      </div>
+      </aside>
     </>
   );
 }

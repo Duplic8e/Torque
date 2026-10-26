@@ -16,3 +16,8 @@ export function worstStatus(items: readonly ItemDue[]): Exclude<Status, 'inspect
   if (items.some((i) => i.status === 'soon')) return 'soon';
   return 'ok';
 }
+
+/** Items that need attention now: overdue plus due soon. This is the app icon badge count. */
+export function attentionCount(items: readonly ItemDue[]): number {
+  return items.filter((i) => i.status === 'overdue' || i.status === 'soon').length;
+}

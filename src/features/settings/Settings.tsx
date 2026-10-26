@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Segmented, TextInput } from '../../core/components/Fields';
+import { Segmented, TextInput, Toggle } from '../../core/components/Fields';
 import { NumberInput } from '../../core/components/NumberInput';
 import { useAppData, useUi } from '../../core/context';
 import { dumpToExport } from '../../data/backup-io';
+import { badgeSupported, enableBadge } from '../../core/badge';
 import { agoLabel, fmtNum } from '../../core/format';
 import { shareOrDownload } from '../../core/files';
 import { getSync } from '../../sync';
@@ -21,6 +22,8 @@ export function Settings() {
   const [busy, setBusy] = useState(false);
   const [importError, setImportError] = useState('');
   const [resetText, setResetText] = useState('');
+  const [badgeNote, setBadgeNote] = useState('');
+  const [badgeOn, setBadgeOn] = useState(settings.badgeEnabled === true);
   const [storage, setStorage] = useState<StorageInfo>({ usedMb: '…', persisted: null });
 
   useEffect(() => {
@@ -78,6 +81,7 @@ export function Settings() {
       <section class="card">
         <h2 class="section-title">Vehicle</h2>
         <p>{vehicle.nickname} · {vehicle.year} {vehicle.trim} 2.5 Turbo</p>
+        <button type="button" class="btn btn-secondary" onClick={() => ui.openSheet({ type: 'vehicle' })}>Edit vehicle details</button>
         <Segmented
           label="Driving style"
           value={vehicle.drivingStyle}
@@ -91,6 +95,29 @@ export function Settings() {
         <h2 class="section-title">Due-soon thresholds</h2>
         <NumberInput label={`Miles (${vehicle.units})`} value={settings.dueSoonMiles} onChange={(v) => void repo.updateSettings({ dueSoonMiles: v ?? 0 })} />
         <NumberInput label="Days" value={settings.dueSoonDays} onChange={(v) => void repo.updateSettings({ dueSoonDays: v ?? 0 })} />
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Notifications</h2>
+        <Toggle
+          label="Badge on the app icon"
+          checked={badgeOn}
+          onChange={async (on) => {
+            setBadgeOn(on); // respond at once; the database write follows
+            setBadgeNote('');
+            if (!on) return void repo.updateSettings({ badgeEnabled: false });
+            const result = await enableBadge();
+            if (result === 'enabled') return void repo.updateSettings({ badgeEnabled: true });
+            setBadgeOn(false);
+            setBadgeNote(result === 'denied' ? 'Permission was denied. Allow notifications for Torque in Settings, then try again.' : 'Badges are not supported here.');
+          }}
+        />
+        <p class="muted">
+          {badgeSupported()
+            ? 'Shows how many items are overdue or due soon. It updates whenever you open Torque; the app cannot update it in the background.'
+            : 'Not available in this browser. On iPhone (iOS 16.4 or later), install Torque to the Home Screen first.'}
+        </p>
+        {badgeNote && <p class="error" role="alert">{badgeNote}</p>}
       </section>
 
       <SyncSection />

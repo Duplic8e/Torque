@@ -110,5 +110,7 @@ export interface Settings {
   schemaVersion: number;
   /** The one-time "Review your schedule" prompt has been dismissed. */
   scheduleReviewed?: boolean;
+  /** Show the count of items needing attention on the home-screen icon. */
+  badgeEnabled?: boolean;
   updatedAt: string;
 }

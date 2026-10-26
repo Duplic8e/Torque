@@ -127,6 +127,7 @@ export const settingsSchema: z.ZodType<Settings> = z.object({
   recordsSinceBackup: z.number().int().nonnegative(),
   schemaVersion: z.number().int(),
   scheduleReviewed: z.boolean().optional(),
+  badgeEnabled: z.boolean().optional(),
   updatedAt: z.string(),
 });
 

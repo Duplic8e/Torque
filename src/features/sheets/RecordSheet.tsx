@@ -41,6 +41,9 @@ export function RecordSheet({ id }: { id: string }) {
         <dt>Date</dt><dd>{fmtDateLong(record.date)}</dd>
         <dt>Odometer</dt><dd class="num">{fmtNum(record.odometer)} {vehicle.units}</dd>
         {cost > 0 && (<><dt>Cost</dt><dd>{fmtMoney(cost)}</dd></>)}
+        {Object.entries(record.itemCosts ?? {}).map(([k, v]) => (
+          <><dt key={`${k}-l`}>{name(k)}</dt><dd key={`${k}-v`} class="num">{fmtMoney(v)}</dd></>
+        ))}
         {record.shop && (<><dt>Shop</dt><dd>{record.shop}</dd></>)}
         {!isNote && (<><dt>Done by</dt><dd>{record.diy ? 'Me (DIY)' : 'Shop'}</dd></>)}
         {record.parts && (<><dt>Parts</dt><dd>{record.parts}</dd></>)}
