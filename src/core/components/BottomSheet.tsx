@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface Props {
   title: string;
@@ -24,7 +24,9 @@ export function BottomSheet({ title, onClose, dirty = false, children }: Props) 
   // Remember what had focus before the sheet appeared (read during the first render, before any
   // autofocus inside the sheet can steal it) so focus can go back there when the sheet closes.
   const opener = useRef(document.activeElement as HTMLElement | null);
-  useEffect(() => {
+  // Layout effects run before the sheet is first painted, so there is no moment where it is visible
+  // but keys still go to the page behind it.
+  useLayoutEffect(() => {
     panel.current?.focus();
     return () => {
       const el = opener.current;
@@ -32,7 +34,7 @@ export function BottomSheet({ title, onClose, dirty = false, children }: Props) 
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return requestClose();
       if (e.key !== 'Tab' || !panel.current) return;
