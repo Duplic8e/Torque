@@ -3,7 +3,6 @@ import { AppDataContext, UiContext, type AppData, type SheetState, type Toast as
 import { Fab } from './core/components/Fab';
 import { TabBar } from './core/components/TabBar';
 import { Toast } from './core/components/Toast';
-import { UpdateToast } from './core/components/UpdateToast';
 import { applyBadge } from './core/badge';
 import { todayLocal } from './core/dates';
 import { useLive } from './core/useLive';
@@ -126,7 +125,6 @@ export function App() {
         {sheet?.type === 'addItem' && <AddItemSheet />}
         {sheet?.type === 'vehicle' && <VehicleSheet />}
         {toast && <Toast toast={toast} onDismiss={dismissToast} />}
-        <UpdateToast />
       </UiContext.Provider>
     </AppDataContext.Provider>
   );

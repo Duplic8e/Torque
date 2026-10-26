@@ -37,7 +37,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();
     await page.goto(url);
-    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
     const cdp = await ctx.newCDPSession(page);
     const { installabilityErrors } = await cdp.send('Page.getInstallabilityErrors');
     assert.deepEqual(installabilityErrors, [], `installability errors: ${JSON.stringify(installabilityErrors)}`);
@@ -74,7 +74,7 @@ try {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(url);
-    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
     await page.reload(); // now controlled by the service worker
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 
@@ -110,7 +110,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();
     await page.goto(url);
-    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
     await page.reload();
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     assert.equal(await page.getByText('Update available').count(), 0, 'no toast before a redeploy');
