@@ -1,0 +1,132 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-body);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+button,
+a {
+  touch-action: manipulation;
+  min-height: var(--tap-min);
+  font: inherit;
+  color: inherit;
+}
+
+/* 16px minimum so Safari does not zoom on focus */
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: max(16px, 1em);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.app-header {
+  flex: none;
+  padding: calc(var(--safe-top) + var(--space-3)) var(--space-4) var(--space-3);
+  font-size: var(--font-size-title);
+  font-weight: 700;
+}
+
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+}
+
+.card {
+  background: var(--color-surface);
+  border: var(--border-thin);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* tab bar */
+.tabbar {
+  flex: none;
+  display: flex;
+  background: var(--color-surface);
+  border-top: var(--border-thin);
+  padding-bottom: var(--safe-bottom);
+}
+
+.tabbar a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tabbar-height);
+  font-size: 11px;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  transition: color var(--motion-fast);
+}
+
+.tabbar a[aria-current='page'] {
+  color: var(--color-text);
+}
+
+.tabbar svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* toast */
+.toast {
+  position: fixed;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-3));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-raised);
+  border: var(--border-thin);
+  border-radius: var(--radius-card);
+}
+
+.toast button {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: 0;
+  border-radius: var(--radius-chip);
+  padding: 0 var(--space-4);
+}

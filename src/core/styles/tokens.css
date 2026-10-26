@@ -1,0 +1,77 @@
+/* Design tokens. The UI restyle pass should only need to edit this file and
+   component CSS. Dark is the default ("garage at night"); light follows the
+   system setting. */
+:root {
+  color-scheme: dark light;
+
+  /* surfaces */
+  --color-bg: #0e0f12;
+  --color-surface: #17181d;
+  --color-surface-raised: #1f2127;
+  --color-border: #2a2d35;
+  --color-text: #f2f3f5;
+  --color-text-muted: #9a9fab;
+
+  /* brand accent (Soul Red): primary action and health ring only */
+  --color-accent: #b3162b;
+  --color-accent-contrast: #ffffff;
+
+  /* status colours: never branding */
+  --color-ok: #2fbf71;
+  --color-soon: #f2a900;
+  --color-overdue: #e5484d;
+  --color-inspect: #8b8f99;
+
+  /* spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* shape */
+  --radius-card: 16px;
+  --radius-chip: 999px;
+  --border-thin: 1px solid var(--color-border);
+
+  /* type */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-size-body: 16px;
+  --font-size-small: 13px;
+  --font-size-title: 22px;
+  --font-size-odometer: 40px;
+
+  /* layout */
+  --tap-min: 44px;
+  --tabbar-height: 56px;
+  --header-height: 52px;
+
+  /* motion */
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+
+  /* safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #f5f5f7;
+    --color-surface: #ffffff;
+    --color-surface-raised: #ffffff;
+    --color-border: #dcdde3;
+    --color-text: #15161a;
+    --color-text-muted: #5f6470;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+  }
+}
