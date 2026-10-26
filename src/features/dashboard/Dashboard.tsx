@@ -5,6 +5,7 @@ import { ProgressBar } from '../../core/components/ProgressBar';
 import { StatusChip } from '../../core/components/StatusChip';
 import { useAppData, useUi } from '../../core/context';
 import { agoLabel, fmtDateShort, remainingLabel } from '../../core/format';
+import { backupNeeded } from '../../engine/backup';
 import { worstStatus } from '../../engine/health';
 import { hrefFor } from '../../router';
 
@@ -12,6 +13,7 @@ const NUDGE_AFTER_DAYS = 14;
 
 export function Dashboard() {
   const { vehicle, due, today, settings, repo } = useAppData();
+  const needsBackup = backupNeeded(settings, vehicle.createdAt, today);
   const ui = useUi();
   const { mileage } = due;
   const upNext = due.items.filter((i) => i.status !== 'inspect').slice(0, 3);
@@ -30,6 +32,17 @@ export function Dashboard() {
             <a class="btn btn-secondary" href={hrefFor('schedule')}>Open schedule</a>
             <button type="button" class="btn-text" onClick={() => void repo.updateSettings({ scheduleReviewed: true })}>Dismiss</button>
           </div>
+        </section>
+      )}
+
+      {needsBackup && (
+        <section class="card callout">
+          <strong>Back up your data</strong>
+          <p class="muted">
+            {settings.lastBackupAt ? `Last backup ${agoLabel(settings.lastBackupAt.slice(0, 10), today)}.` : 'You have not made a backup yet.'} Export one to
+            Files or iCloud Drive so nothing is lost with the phone.
+          </p>
+          <a class="btn btn-secondary" href={hrefFor('settings')}>Open backup settings</a>
         </section>
       )}
 

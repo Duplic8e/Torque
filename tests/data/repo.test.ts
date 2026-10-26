@@ -77,3 +77,35 @@ describe('repo', () => {
     expect(await repo.listItems(vehicleId)).toHaveLength(CX5_TURBO_SEED.length + 1);
   });
 });
+
+describe('backup round trip', () => {
+  it('export, reset, import restores identical live counts', async () => {
+    const { dumpToExport, exportToDump } = await import('../../src/data/backup-io');
+    const { parseExport, countsOf } = await import('../../src/engine/backup');
+    await repo.addReading(vehicleId, '2026-10-01', 50_000);
+    const a = await repo.addRecord({ vehicleId, date: '2026-10-02', odometer: 50_100, itemKeys: ['oil'], totalCost: 80 });
+    const b = await repo.addRecord({ vehicleId, date: '2026-10-03', odometer: 50_200, itemKeys: ['rotation'] });
+    await repo.deleteRecord(b.id);
+
+    const file = await dumpToExport(await repo.dumpAll(), '2026-10-26T00:00:00Z');
+    const reparsed = parseExport(JSON.parse(JSON.stringify(file)));
+    expect(reparsed.ok).toBe(true);
+    if (!reparsed.ok) return;
+    expect(countsOf(reparsed.file)).toEqual({ vehicles: 1, records: 1, readings: 1, photos: 0 });
+
+    await repo.resetAll();
+    expect(await repo.getVehicle()).toBeUndefined();
+    await repo.replaceAll(exportToDump(reparsed.file));
+    expect((await repo.listRecords(vehicleId)).map((r) => r.id)).toEqual([a.id]);
+    expect(await repo.listReadings(vehicleId)).toHaveLength(1);
+    expect(await repo.listItems(vehicleId)).toHaveLength(CX5_TURBO_SEED.length);
+  });
+
+  it('merge keeps a deletion made on this device', async () => {
+    const rec = await repo.addRecord({ vehicleId, date: '2026-10-02', odometer: 50_100, itemKeys: ['oil'] });
+    const before = await repo.dumpAll(); // record still live
+    await repo.deleteRecord(rec.id);
+    await repo.mergeAll(before);
+    expect(await repo.listRecords(vehicleId)).toHaveLength(0);
+  });
+});

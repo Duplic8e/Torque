@@ -1,33 +1,61 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { BottomSheet } from '../../core/components/BottomSheet';
 import { DateInput, TextInput, Toggle } from '../../core/components/Fields';
 import { NumberInput } from '../../core/components/NumberInput';
 import { useAppData, useUi } from '../../core/context';
 import { fmtDateShort, fmtNum } from '../../core/format';
+import { compressImage } from '../../core/image';
 import { OdometerRegressionError } from '../../data/repo';
+import type { Attachment } from '../../data/types';
 import type { MileagePoint } from '../../engine/mileage';
 
 interface Props {
   mode: 'service' | 'note';
   presetKeys: string[];
+  editId?: string;
+  duplicateId?: string;
 }
 
-export function LogServiceSheet({ mode, presetKeys }: Props) {
+interface Photo {
+  id: string;
+  url: string;
+  /** Present for photos picked in this sheet; stored attachments have none. */
+  blob?: Blob;
+}
+
+export function LogServiceSheet({ mode, presetKeys, editId, duplicateId }: Props) {
   const { repo, vehicle, items, records, due, today } = useAppData();
   const ui = useUi();
-  const note = mode === 'note';
+  const editing = records.find((r) => r.id === editId);
+  const source = editing ?? records.find((r) => r.id === duplicateId);
+  const note = editing ? editing.itemKeys.length === 0 : mode === 'note';
 
-  const [date, setDate] = useState(today);
-  const [odometer, setOdometer] = useState<number | undefined>(Math.round(due.mileage.miles) || undefined);
-  const [keys, setKeys] = useState<string[]>(presetKeys);
-  const [cost, setCost] = useState('');
-  const [shop, setShop] = useState('');
-  const [diy, setDiy] = useState(false);
-  const [parts, setParts] = useState('');
-  const [notes, setNotes] = useState('');
-  const [touched, setTouched] = useState(presetKeys.length > 0);
+  const [date, setDate] = useState(editing ? editing.date : today);
+  const [odometer, setOdometer] = useState<number | undefined>(editing ? editing.odometer : Math.round(due.mileage.miles) || undefined);
+  const [keys, setKeys] = useState<string[]>(source ? source.itemKeys : presetKeys);
+  const [cost, setCost] = useState(source?.totalCost !== undefined ? String(source.totalCost) : '');
+  const [shop, setShop] = useState(source?.shop ?? '');
+  const [diy, setDiy] = useState(source?.diy ?? false);
+  const [parts, setParts] = useState(source?.parts ?? '');
+  const [notes, setNotes] = useState(source?.notes ?? '');
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [removed, setRemoved] = useState<string[]>([]);
+  const [touched, setTouched] = useState(presetKeys.length > 0 || !!duplicateId);
   const [warning, setWarning] = useState<MileagePoint | null>(null);
   const [error, setError] = useState('');
+
+  // Existing photos of the record being edited.
+  useEffect(() => {
+    if (!editing) return;
+    let urls: string[] = [];
+    void repo.getAttachments(editing.attachmentIds).then((list: Attachment[]) => {
+      const loaded = list.map((a) => ({ id: a.id, url: URL.createObjectURL(a.blob) }));
+      urls = loaded.map((p) => p.url);
+      setPhotos((cur) => [...loaded, ...cur]);
+    });
+    return () => urls.forEach(URL.revokeObjectURL);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const touch = <T,>(set: (v: T) => void) => (v: T) => {
     set(v);
@@ -38,36 +66,61 @@ export function LogServiceSheet({ mode, presetKeys }: Props) {
   const shops = [...new Set(records.map((r) => r.shop).filter((s): s is string => !!s))];
   const toggleKey = (key: string) => touch(setKeys)(keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key]);
 
+  const addPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const blob = await compressImage(file);
+      touch(setPhotos)([...photos, { id: crypto.randomUUID(), url: URL.createObjectURL(blob), blob }]);
+    } catch {
+      setError('That photo could not be read.');
+    }
+  };
+  const removePhoto = (p: Photo) => {
+    if (!p.blob) setRemoved([...removed, p.id]);
+    setPhotos(photos.filter((x) => x.id !== p.id));
+    setTouched(true);
+  };
+
   const save = async (allowCorrection: boolean) => {
     if (odometer === undefined) return setError('Enter the odometer reading.');
     if (!note && keys.length === 0) return setError('Pick at least one service.');
     if (note && !notes.trim()) return setError('Write a note.');
-    const totalCost = cost.trim() === '' ? undefined : Number(cost.replace(/[^0-9.]/g, ''));
+    const parsed = cost.trim() === '' ? undefined : Number(cost.replace(/[^0-9.]/g, ''));
+    const fields = {
+      date,
+      odometer,
+      itemKeys: note ? [] : keys,
+      totalCost: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
+      shop: shop.trim() || undefined,
+      diy: note ? false : diy,
+      parts: parts.trim() || undefined,
+      notes: notes.trim() || undefined,
+    };
     try {
-      const rec = await repo.addRecord(
-        {
-          vehicleId: vehicle.id,
-          date,
-          odometer,
-          itemKeys: note ? [] : keys,
-          totalCost: Number.isFinite(totalCost) ? totalCost : undefined,
-          shop: shop.trim() || undefined,
-          diy: note ? false : diy,
-          parts: parts.trim() || undefined,
-          notes: notes.trim() || undefined,
-        },
-        { allowCorrection },
-      );
+      let id: string;
+      if (editing) {
+        id = editing.id;
+        await repo.updateRecord(id, { ...fields, attachmentIds: editing.attachmentIds.filter((a) => !removed.includes(a)) });
+        for (const a of removed) await repo.removeAttachment(a);
+      } else {
+        id = (await repo.addRecord({ vehicleId: vehicle.id, ...fields }, { allowCorrection })).id;
+      }
+      for (const p of photos) if (p.blob) await repo.addAttachment(id, p.blob);
       ui.closeSheet();
-      ui.showToast({ message: note ? 'Note saved' : 'Service logged', actionLabel: 'Undo', onAction: () => void repo.deleteRecord(rec.id) });
+      ui.showToast(
+        editing
+          ? { message: 'Changes saved' }
+          : { message: note ? 'Note saved' : 'Service logged', actionLabel: 'Undo', onAction: () => void repo.deleteRecord(id) },
+      );
     } catch (e) {
       if (e instanceof OdometerRegressionError) setWarning(e.previous);
       else throw e;
     }
   };
 
+  const title = editing ? (note ? 'Edit note' : 'Edit service') : note ? 'Add note' : 'Log service';
   return (
-    <BottomSheet title={note ? 'Add note' : 'Log service'} onClose={ui.closeSheet} dirty={touched}>
+    <BottomSheet title={title} onClose={ui.closeSheet} dirty={touched}>
       <DateInput label="Date" value={date} onChange={touch(setDate)} />
       <NumberInput label={`Odometer (${vehicle.units})`} value={odometer} large onChange={touch(setOdometer)} />
 
@@ -75,7 +128,7 @@ export function LogServiceSheet({ mode, presetKeys }: Props) {
         <fieldset class="field">
           <legend class="field-label">Services done</legend>
           <div class="chips">
-            {items.filter((i) => i.enabled).map((i) => (
+            {items.filter((i) => i.enabled || keys.includes(i.key)).map((i) => (
               <button key={i.key} type="button" class="select-chip" aria-pressed={keys.includes(i.key)} onClick={() => toggleKey(i.key)}>
                 {i.name}
               </button>
@@ -93,6 +146,26 @@ export function LogServiceSheet({ mode, presetKeys }: Props) {
         <span class="field-label">Notes</span>
         <textarea class="input" rows={3} value={notes} onInput={(e) => touch(setNotes)((e.currentTarget as HTMLTextAreaElement).value)} />
       </label>
+
+      <div class="field">
+        <span class="field-label">Receipt photos</span>
+        <div class="photo-row">
+          {photos.map((p) => (
+            <div key={p.id} class="photo-thumb">
+              <img src={p.url} alt="Receipt" />
+              <button type="button" class="photo-remove" aria-label="Remove photo" onClick={() => removePhoto(p)}>×</button>
+            </div>
+          ))}
+          <label class="photo-add">
+            Add photo
+            <input type="file" accept="image/*" class="visually-hidden" onChange={(e) => {
+              const input = e.currentTarget as HTMLInputElement;
+              void addPhoto(input.files?.[0]);
+              input.value = '';
+            }} />
+          </label>
+        </div>
+      </div>
 
       {error && <p class="error" role="alert">{error}</p>}
       {warning ? (

@@ -3,6 +3,7 @@ import { useContext } from 'preact/hooks';
 import type { Repo } from '../data/repo';
 import type { OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from '../data/types';
 import type { DueResult } from '../engine/due';
+import type { ExportFile } from '../engine/backup';
 
 export interface AppData {
   repo: Repo;
@@ -17,7 +18,9 @@ export interface AppData {
 
 export type SheetState =
   | { type: 'odometer' }
-  | { type: 'log'; mode?: 'service' | 'note'; presetKeys?: string[] }
+  | { type: 'log'; mode?: 'service' | 'note'; presetKeys?: string[]; editId?: string; duplicateId?: string }
+  | { type: 'record'; id: string }
+  | { type: 'import'; file: ExportFile }
   | { type: 'item'; key: string }
   | { type: 'addItem' };
 

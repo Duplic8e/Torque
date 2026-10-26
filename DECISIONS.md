@@ -36,3 +36,18 @@ Where the spec was ambiguous, the simplest option that keeps data safe was chose
 - **Settings** has only driving style and due-soon thresholds for now; backup, sync and calendar settings arrive in later phases.
 - **Dashboard quick actions** omit "Export to Calendar" until Phase 5.
 - **Browser smoke test:** `tests/e2e/smoke.mjs` drives onboarding, logging an oil change, the odometer warning, reload persistence and the 16 px input rule. It uses the preinstalled Playwright and is run by hand, not in CI.
+
+## Phase 4a
+
+- **Backup file** is `{ app, schemaVersion, exportedAt, vehicles, items, records, odometer, settings, attachments }`. It includes tombstoned rows so a restore or merge keeps deletions; counts shown to the user cover live rows only. Attachments carry their full metadata plus `base64`. Nothing secret can be in it: there is no token or sync config in the database yet, and Phase 4b keeps those out of the export tables.
+- **Import** refuses other apps, newer schema versions and files that fail Zod validation, with a plain-language reason. Merge is by id, newest `updatedAt` wins, ties keep the local row (the same function sync will use).
+- **Restore from the welcome screen:** after "Reset all data" the app returns to onboarding, so the welcome screen also offers "Restore from backup file". The same file picker is in Settings.
+- **Backup nudge:** the dashboard banner appears after 30 days or 5 new records since the last export (counted from when the car was added if you never exported). `lastBackupAt` is only set when the share sheet completes or the download starts, not when you cancel. Cloud sync (4b) will replace this nudge with the 24-hour sync-failure banner.
+- **iOS share sheet:** `navigator.share` needs a user gesture. Export reads the database first, then shares; if iOS rejects the late call the code falls back to a download link. Worth checking on the phone.
+- **Editing a record** skips the lower-odometer check, since the record may legitimately be corrected to an earlier value. Adding records and readings still checks.
+- **Cost per mile** uses lifetime spend over the span between the lowest and highest odometer values seen (readings, records, purchase odometer), not the extrapolated estimate, so the number does not drift day to day. Correction readings are ignored.
+- **Cost categories:** Ignition and Inspection services roll into "Other"; a visit's cost is split by per-item costs when present, otherwise evenly across its services. Per-item cost entry is not in the log form yet (the data model supports it).
+- **Charts** use the validated categorical slots in fixed order as `--series-*` tokens (light and dark steps). The category legend carries every value and percentage, and the monthly chart has a "View as table" fallback, so colour is never the only signal. Tapping a month shows its exact value above the chart.
+- **Receipt photos** are resized to 1600 px and re-encoded as JPEG 0.7 before storing; removed photos are tombstoned like everything else.
+- **Storage:** `navigator.storage.persist()` is requested on launch and the result is shown in Settings > About.
+- **Settings** gained Backup, About and Danger zone (type RESET). Calendar and notification settings arrive in Phase 5, sync in 4b.
