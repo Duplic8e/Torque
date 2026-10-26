@@ -1,4 +1,4 @@
-/** Bump when the stored shape changes, and add a Dexie version plus a step in `migrateExport`. */
+/** Export/backup schema version. The Dexie version is separate: v2 added the device-local `kv` table, which exports never contain. Bump when the stored shape changes, and add a Dexie version plus a step in `migrateExport`. */
 export const CURRENT_SCHEMA_VERSION = 1;
 
 /**

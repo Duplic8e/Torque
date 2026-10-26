@@ -3,13 +3,11 @@ import type { Dump } from './repo';
 import type { Attachment } from './types';
 import type { ExportFile } from '../engine/backup';
 
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
+async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
 }
 
 function base64ToBlob(base64: string, mime: string): Blob {
@@ -20,8 +18,10 @@ function base64ToBlob(base64: string, mime: string): Blob {
 }
 
 export async function dumpToExport(dump: Dump, exportedAt: string): Promise<ExportFile> {
+  // Photos that were never downloaded to this device cannot be exported; callers hydrate first.
+  const withBlobs = dump.attachments.filter((a): a is Attachment & { blob: Blob } => a.blob !== undefined);
   const attachments = await Promise.all(
-    dump.attachments.map(async ({ blob, ...meta }) => ({ ...meta, base64: await blobToBase64(blob) })),
+    withBlobs.map(async ({ blob, ...meta }) => ({ ...meta, base64: await blobToBase64(blob) })),
   );
   return {
     app: 'torque',

@@ -93,7 +93,8 @@ export interface ServiceRecord extends Syncable {
 export interface Attachment extends Syncable {
   id: ID;
   recordId: ID;
-  blob: Blob;
+  /** Absent until a photo synced from another device is first viewed. */
+  blob?: Blob;
   mime: string;
   createdAt: string;
 }

@@ -9,6 +9,9 @@ import { runOnboarding, type ServiceAnswer } from '../../data/onboarding';
 import type { Repo } from '../../data/repo';
 import { CORE_ITEM_KEYS, CX5_TURBO_SEED } from '../../data/seed-cx5-turbo';
 import type { Vehicle } from '../../data/types';
+import { getSync } from '../../sync';
+import type { SyncConfig } from '../../sync/types';
+import { SyncForm } from '../settings/SyncForm';
 
 type Mode = ServiceAnswer['mode'];
 interface Answer {
@@ -18,7 +21,7 @@ interface Answer {
 }
 
 const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019];
-const STEPS = ['welcome', 'vehicle', 'odometer', 'style', 'services'] as const;
+const STEPS = ['welcome', 'vehicle', 'odometer', 'style', 'services', 'sync'] as const;
 const NAMES = Object.fromEntries(CX5_TURBO_SEED.map((r) => [r.key, r.name]));
 
 export function Onboarding({ repo }: { repo: Repo }) {
@@ -39,6 +42,8 @@ export function Onboarding({ repo }: { repo: Repo }) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const restoreInput = useRef<HTMLInputElement>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [syncConfig, setSyncConfig] = useState<SyncConfig | null>(null);
 
   const restoreFromFile = async (file: File | undefined) => {
     if (!file) return;
@@ -63,14 +68,20 @@ export function Onboarding({ repo }: { repo: Repo }) {
     setStep(step + 1);
   };
 
+  const validateServices = () => {
+    for (const [key, a] of Object.entries(answers)) {
+      if (a.mode !== 'entered') continue;
+      if (a.odometer === undefined) return setError(`Enter the mileage for ${NAMES[key]}, or choose “Not sure”.`);
+      if (a.odometer > (odometer ?? 0)) return setError(`${NAMES[key]}: mileage is higher than the current odometer.`);
+    }
+    setError('');
+    setStep(step + 1);
+  };
+
   const finish = async () => {
     const services: Record<string, ServiceAnswer> = {};
     for (const [key, a] of Object.entries(answers)) {
-      if (a.mode === 'entered') {
-        if (a.odometer === undefined) return setError(`Enter the mileage for ${NAMES[key]}, or choose “Not sure”.`);
-        if (a.odometer > (odometer ?? 0)) return setError(`${NAMES[key]}: mileage is higher than the current odometer.`);
-        services[key] = { mode: 'entered', date: a.date, odometer: a.odometer };
-      } else services[key] = { mode: a.mode } as ServiceAnswer;
+      services[key] = a.mode === 'entered' ? { mode: 'entered', date: a.date, odometer: a.odometer ?? 0 } : ({ mode: a.mode } as ServiceAnswer);
     }
     setSaving(true);
     await runOnboarding(
@@ -84,6 +95,13 @@ export function Onboarding({ repo }: { repo: Repo }) {
       },
       today,
     );
+    if (syncConfig) {
+      try {
+        await getSync().connect(syncConfig);
+      } catch {
+        // The car is saved either way; sync can be connected again from Settings.
+      }
+    }
   };
 
   const name = STEPS[step];
@@ -99,7 +117,13 @@ export function Onboarding({ repo }: { repo: Repo }) {
             <button type="button" class="btn-text" onClick={() => restoreInput.current?.click()}>Restore from backup file</button>
             <input ref={restoreInput} type="file" accept="application/json,.json" class="visually-hidden" aria-label="Choose backup file"
               onChange={(e) => { const i = e.currentTarget as HTMLInputElement; void restoreFromFile(i.files?.[0]); i.value = ''; }} />
-            <button type="button" class="btn-text" disabled title="Available once cloud sync is built">Restore from GitHub (coming soon)</button>
+            <button type="button" class="btn-text" onClick={() => setRestoring(!restoring)}>Restore from GitHub</button>
+            {restoring && (
+              <section class="card">
+                <p class="muted">Enter the repository and token you used before. Your records, readings and photos come back.</p>
+                <SyncForm mode="restore" />
+              </section>
+            )}
           </>
         )}
 
@@ -170,14 +194,26 @@ export function Onboarding({ repo }: { repo: Repo }) {
           </>
         )}
 
+        {name === 'sync' && (
+          <>
+            <h1>Cloud sync</h1>
+            <p class="muted">
+              Optional. Keeps your data in a private GitHub repository you own, so losing the phone loses nothing. You can also set this up later in Settings.
+            </p>
+            <SyncForm mode="onboarding" onReady={setSyncConfig} />
+          </>
+        )}
+
         {error && <p class="error" role="alert">{error}</p>}
       </div>
 
       {name !== 'welcome' && (
         <footer class="onboarding-footer">
           <button type="button" class="btn btn-secondary" onClick={() => setStep(step - 1)}>Back</button>
-          {name === 'services' ? (
-            <button type="button" class="btn btn-primary" disabled={saving} onClick={() => void finish()}>Finish</button>
+          {name === 'sync' ? (
+            <button type="button" class="btn btn-primary" disabled={saving} onClick={() => void finish()}>{syncConfig ? 'Finish' : 'Skip and finish'}</button>
+          ) : name === 'services' ? (
+            <button type="button" class="btn btn-primary" onClick={validateServices}>Next</button>
           ) : (
             <button type="button" class="btn btn-primary" onClick={next}>Next</button>
           )}

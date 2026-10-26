@@ -6,8 +6,8 @@ import { useAppData, useUi } from '../../core/context';
 import { fmtDateShort, fmtNum } from '../../core/format';
 import { compressImage } from '../../core/image';
 import { OdometerRegressionError } from '../../data/repo';
-import type { Attachment } from '../../data/types';
 import type { MileagePoint } from '../../engine/mileage';
+import { getSync } from '../../sync';
 
 interface Props {
   mode: 'service' | 'note';
@@ -48,7 +48,7 @@ export function LogServiceSheet({ mode, presetKeys, editId, duplicateId }: Props
   useEffect(() => {
     if (!editing) return;
     let urls: string[] = [];
-    void repo.getAttachments(editing.attachmentIds).then((list: Attachment[]) => {
+    void getSync().loadPhotoBlobs(editing.attachmentIds).then((list) => {
       const loaded = list.map((a) => ({ id: a.id, url: URL.createObjectURL(a.blob) }));
       urls = loaded.map((p) => p.url);
       setPhotos((cur) => [...loaded, ...cur]);

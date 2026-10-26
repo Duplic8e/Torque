@@ -9,6 +9,12 @@ import type {
   Vehicle,
 } from './types';
 
+/** Device-local key/value rows (sync config, sync state). Never exported, never synced. */
+export interface KvRow {
+  key: string;
+  value: unknown;
+}
+
 export class TorqueDB extends Dexie {
   vehicles!: Table<Vehicle, string>;
   items!: Table<ServiceItem, string>;
@@ -16,6 +22,7 @@ export class TorqueDB extends Dexie {
   odometer!: Table<OdometerReading, string>;
   attachments!: Table<Attachment, string>;
   settings!: Table<Settings, string>;
+  kv!: Table<KvRow, string>;
 
   constructor(name = 'torque') {
     super(name);
@@ -27,6 +34,8 @@ export class TorqueDB extends Dexie {
       attachments: 'id, recordId',
       settings: 'id',
     });
+    // v2: device-local key/value store for the sync token and state.
+    this.version(2).stores({ kv: 'key' });
   }
 }
 

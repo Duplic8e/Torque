@@ -1,8 +1,8 @@
+import type { Table } from 'dexie';
 import { newId } from '../core/ids';
 import { checkOdometer, type MileagePoint } from '../engine/mileage';
 import { computeDue, type DueResult } from '../engine/due';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
-import { mergeRows, mergeSettings } from '../engine/backup';
 import { TorqueDB } from './schema';
 import { seedItems } from './seed-cx5-turbo';
 import type { Attachment, Baseline, ID, ISODate, OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from './types';
@@ -224,6 +224,10 @@ export function createRepo(db: TorqueDB) {
     return attachment;
   }
 
+  async function setAttachmentBlob(id: ID, blob: Blob): Promise<void> {
+    await db.attachments.update(id, { blob }); // bytes only: no updatedAt change, nothing to sync
+  }
+
   async function getAttachments(ids: readonly ID[]): Promise<Attachment[]> {
     return live((await db.attachments.bulkGet([...ids])).filter((a): a is Attachment => !!a));
   }
@@ -253,16 +257,25 @@ export function createRepo(db: TorqueDB) {
     });
   }
 
-  /** Merges `dump` into what is stored: by id, newest `updatedAt` wins. */
+  /**
+   * Merges `dump` into what is stored: by id, newest `updatedAt` wins, ties keep the local row.
+   * Only winning remote rows are written, so an unchanged merge touches nothing.
+   */
   async function mergeAll(dump: Dump): Promise<void> {
-    const mine = await dumpAll();
-    await replaceAll({
-      vehicles: mergeRows(mine.vehicles, dump.vehicles),
-      items: mergeRows(mine.items, dump.items),
-      records: mergeRows(mine.records, dump.records),
-      odometer: mergeRows(mine.odometer, dump.odometer),
-      attachments: mergeRows(mine.attachments, dump.attachments),
-      settings: mergeSettings(mine.settings, dump.settings),
+    await db.transaction('rw', [db.vehicles, db.items, db.records, db.odometer, db.attachments, db.settings], async () => {
+      const newer = async <T extends { id: string; updatedAt: string }>(table: Table<T, string>, rows: readonly T[]) => {
+        const mine = await table.bulkGet(rows.map((r) => r.id));
+        return rows.flatMap((row, i) => (!mine[i] || row.updatedAt > mine[i]!.updatedAt ? [{ row, local: mine[i] }] : []));
+      };
+      await db.vehicles.bulkPut((await newer(db.vehicles, dump.vehicles)).map((w) => w.row));
+      await db.items.bulkPut((await newer(db.items, dump.items)).map((w) => w.row));
+      await db.records.bulkPut((await newer(db.records, dump.records)).map((w) => w.row));
+      await db.odometer.bulkPut((await newer(db.odometer, dump.odometer)).map((w) => w.row));
+      // A photo's bytes never change for a given id, so keep a local blob when remote metadata wins.
+      const photos = await newer(db.attachments, dump.attachments);
+      await db.attachments.bulkPut(photos.map(({ row, local }) => (row.blob || !local?.blob ? row : { ...row, blob: local.blob })));
+      const mine = await db.settings.get('settings');
+      if (dump.settings && (!mine || dump.settings.updatedAt > mine.updatedAt)) await db.settings.put(dump.settings);
     });
   }
 
@@ -272,13 +285,13 @@ export function createRepo(db: TorqueDB) {
 
   /** Erases all data on this device. */
   async function resetAll(): Promise<void> {
-    await db.transaction('rw', [db.vehicles, db.items, db.records, db.odometer, db.attachments, db.settings], async () => {
-      await Promise.all([db.vehicles.clear(), db.items.clear(), db.records.clear(), db.odometer.clear(), db.attachments.clear(), db.settings.clear()]);
+    await db.transaction('rw', [db.vehicles, db.items, db.records, db.odometer, db.attachments, db.settings, db.kv], async () => {
+      await Promise.all([db.vehicles.clear(), db.items.clear(), db.records.clear(), db.odometer.clear(), db.attachments.clear(), db.settings.clear(), db.kv.clear()]);
     });
   }
 
   return {
-    addAttachment, getAttachments, removeAttachment,
+    addAttachment, getAttachments, setAttachmentBlob, removeAttachment,
     dumpAll, replaceAll, mergeAll, markBackedUp, resetAll,
     getSettings, updateSettings,
     getVehicle, createVehicle, updateVehicle,
@@ -291,8 +304,13 @@ export function createRepo(db: TorqueDB) {
 
 export type Repo = ReturnType<typeof createRepo>;
 
+let sharedDb: TorqueDB | undefined;
+/** The app-wide `torque` database, opened on first use. */
+export function getDb(): TorqueDB {
+  return (sharedDb ??= new TorqueDB());
+}
+
 let shared: Repo | undefined;
-/** The app-wide repo on the `torque` database, opened on first use. */
 export function getRepo(): Repo {
-  return (shared ??= createRepo(new TorqueDB()));
+  return (shared ??= createRepo(getDb()));
 }
