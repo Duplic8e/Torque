@@ -120,3 +120,14 @@ export const settingsSchema: z.ZodType<Settings> = z.object({
   scheduleReviewed: z.boolean().optional(),
   updatedAt: z.string(),
 });
+
+/** An attachment as stored in a backup file: the blob is base64 text. */
+export const attachmentFileSchema = z.object({
+  id: z.string(),
+  recordId: z.string(),
+  mime: z.string(),
+  base64: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  deletedAt: z.string().optional(),
+});

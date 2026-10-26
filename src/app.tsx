@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { AppDataContext, UiContext, type AppData, type SheetState, type Toast as ToastData, type UiApi } from './core/context';
 import { Fab } from './core/components/Fab';
 import { TabBar } from './core/components/TabBar';
@@ -8,15 +8,18 @@ import { todayLocal } from './core/dates';
 import { useLive } from './core/useLive';
 import { getRepo } from './data/repo';
 import { computeDue } from './engine/due';
+import { Costs } from './features/costs/Costs';
 import { Dashboard } from './features/dashboard/Dashboard';
+import { History } from './features/history/History';
 import { Onboarding } from './features/onboarding/Onboarding';
-import { Placeholder } from './features/placeholder';
 import { Schedule } from './features/schedule/Schedule';
 import { Settings } from './features/settings/Settings';
 import { AddItemSheet } from './features/sheets/AddItemSheet';
 import { ItemSheet } from './features/sheets/ItemSheet';
+import { ImportSheet } from './features/sheets/ImportSheet';
 import { LogServiceSheet } from './features/sheets/LogServiceSheet';
 import { OdometerSheet } from './features/sheets/OdometerSheet';
+import { RecordSheet } from './features/sheets/RecordSheet';
 import { useRoute, type Route } from './router';
 
 const TITLES: Record<Route, string> = {
@@ -45,6 +48,11 @@ async function loadAll() {
 export function App() {
   const route = useRoute();
   const raw = useLive(loadAll);
+
+  // Ask iOS to keep our data under storage pressure; the result is shown in Settings > About.
+  useEffect(() => {
+    void navigator.storage?.persist?.().catch(() => undefined);
+  }, []);
   const [sheet, setSheet] = useState<SheetState | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
 
@@ -71,14 +79,16 @@ export function App() {
         <main class="app-main">
           {route === 'dashboard' && <Dashboard />}
           {route === 'schedule' && <Schedule />}
-          {route === 'history' && <Placeholder title="History" />}
-          {route === 'costs' && <Placeholder title="Costs" />}
+          {route === 'history' && <History />}
+          {route === 'costs' && <Costs />}
           {route === 'settings' && <Settings />}
         </main>
         <Fab />
         <TabBar current={route} />
         {sheet?.type === 'odometer' && <OdometerSheet />}
-        {sheet?.type === 'log' && <LogServiceSheet mode={sheet.mode ?? 'service'} presetKeys={sheet.presetKeys ?? []} />}
+        {sheet?.type === 'log' && <LogServiceSheet key={sheet.editId ?? sheet.duplicateId ?? 'new'} mode={sheet.mode ?? 'service'} presetKeys={sheet.presetKeys ?? []} editId={sheet.editId} duplicateId={sheet.duplicateId} />}
+        {sheet?.type === 'record' && <RecordSheet id={sheet.id} />}
+        {sheet?.type === 'import' && <ImportSheet file={sheet.file} />}
         {sheet?.type === 'item' && <ItemSheet itemKey={sheet.key} />}
         {sheet?.type === 'addItem' && <AddItemSheet />}
         {toast && <Toast toast={toast} onDismiss={dismissToast} />}

@@ -2,9 +2,10 @@ import { newId } from '../core/ids';
 import { checkOdometer, type MileagePoint } from '../engine/mileage';
 import { computeDue, type DueResult } from '../engine/due';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
+import { mergeRows, mergeSettings } from '../engine/backup';
 import { TorqueDB } from './schema';
 import { seedItems } from './seed-cx5-turbo';
-import type { Baseline, ID, ISODate, OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from './types';
+import type { Attachment, Baseline, ID, ISODate, OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 'settings',
@@ -23,6 +24,16 @@ export class OdometerRegressionError extends Error {
     super(`Odometer is lower than the ${previous.date} reading of ${previous.value}`);
     this.name = 'OdometerRegressionError';
   }
+}
+
+/** Every row of every table, tombstones included. */
+export interface Dump {
+  vehicles: Vehicle[];
+  items: ServiceItem[];
+  records: ServiceRecord[];
+  odometer: OdometerReading[];
+  attachments: Attachment[];
+  settings: Settings | undefined;
 }
 
 export type NewVehicle = Pick<Vehicle, 'nickname' | 'year' | 'units' | 'drivingStyle'> &
@@ -202,7 +213,73 @@ export function createRepo(db: TorqueDB) {
     return computeDue({ today, vehicle, items, records, readings, settings });
   }
 
+  async function addAttachment(recordId: ID, blob: Blob): Promise<Attachment> {
+    const now = nowIso();
+    const attachment: Attachment = { id: newId(), recordId, blob, mime: blob.type || 'image/jpeg', createdAt: now, updatedAt: now };
+    await db.transaction('rw', db.attachments, db.records, async () => {
+      await db.attachments.add(attachment);
+      const record = await db.records.get(recordId);
+      if (record) await db.records.update(recordId, { attachmentIds: [...record.attachmentIds, attachment.id], updatedAt: now });
+    });
+    return attachment;
+  }
+
+  async function getAttachments(ids: readonly ID[]): Promise<Attachment[]> {
+    return live((await db.attachments.bulkGet([...ids])).filter((a): a is Attachment => !!a));
+  }
+
+  async function removeAttachment(id: ID): Promise<void> {
+    const now = nowIso();
+    await db.attachments.update(id, { deletedAt: now, updatedAt: now });
+  }
+
+  async function dumpAll(): Promise<Dump> {
+    const [vehicles, items, records, odometer, attachments, settings] = await Promise.all([
+      db.vehicles.toArray(), db.items.toArray(), db.records.toArray(), db.odometer.toArray(), db.attachments.toArray(), db.settings.get('settings'),
+    ]);
+    return { vehicles, items, records, odometer, attachments, settings };
+  }
+
+  /** Replaces everything with `dump` in one transaction. */
+  async function replaceAll(dump: Dump): Promise<void> {
+    await db.transaction('rw', [db.vehicles, db.items, db.records, db.odometer, db.attachments, db.settings], async () => {
+      await Promise.all([db.vehicles.clear(), db.items.clear(), db.records.clear(), db.odometer.clear(), db.attachments.clear(), db.settings.clear()]);
+      await db.vehicles.bulkPut(dump.vehicles);
+      await db.items.bulkPut(dump.items);
+      await db.records.bulkPut(dump.records);
+      await db.odometer.bulkPut(dump.odometer);
+      await db.attachments.bulkPut(dump.attachments);
+      if (dump.settings) await db.settings.put(dump.settings);
+    });
+  }
+
+  /** Merges `dump` into what is stored: by id, newest `updatedAt` wins. */
+  async function mergeAll(dump: Dump): Promise<void> {
+    const mine = await dumpAll();
+    await replaceAll({
+      vehicles: mergeRows(mine.vehicles, dump.vehicles),
+      items: mergeRows(mine.items, dump.items),
+      records: mergeRows(mine.records, dump.records),
+      odometer: mergeRows(mine.odometer, dump.odometer),
+      attachments: mergeRows(mine.attachments, dump.attachments),
+      settings: mergeSettings(mine.settings, dump.settings),
+    });
+  }
+
+  async function markBackedUp(): Promise<void> {
+    await updateSettings({ lastBackupAt: nowIso(), recordsSinceBackup: 0 });
+  }
+
+  /** Erases all data on this device. */
+  async function resetAll(): Promise<void> {
+    await db.transaction('rw', [db.vehicles, db.items, db.records, db.odometer, db.attachments, db.settings], async () => {
+      await Promise.all([db.vehicles.clear(), db.items.clear(), db.records.clear(), db.odometer.clear(), db.attachments.clear(), db.settings.clear()]);
+    });
+  }
+
   return {
+    addAttachment, getAttachments, removeAttachment,
+    dumpAll, replaceAll, mergeAll, markBackedUp, resetAll,
     getSettings, updateSettings,
     getVehicle, createVehicle, updateVehicle,
     listItems, updateItem, addCustomItem, setBaseline,

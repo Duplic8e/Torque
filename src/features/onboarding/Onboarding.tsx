@@ -1,8 +1,10 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { DateInput, Field, Segmented, TextInput } from '../../core/components/Fields';
 import { InstallHint } from '../../core/components/InstallHint';
 import { NumberInput } from '../../core/components/NumberInput';
 import { todayLocal } from '../../core/dates';
+import { exportToDump } from '../../data/backup-io';
+import { parseExport } from '../../engine/backup';
 import { runOnboarding, type ServiceAnswer } from '../../data/onboarding';
 import type { Repo } from '../../data/repo';
 import { CORE_ITEM_KEYS, CX5_TURBO_SEED } from '../../data/seed-cx5-turbo';
@@ -36,6 +38,21 @@ export function Onboarding({ repo }: { repo: Repo }) {
   );
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const restoreInput = useRef<HTMLInputElement>(null);
+
+  const restoreFromFile = async (file: File | undefined) => {
+    if (!file) return;
+    setError('');
+    let raw: unknown;
+    try {
+      raw = JSON.parse(await file.text());
+    } catch {
+      return setError('That file is not valid JSON.');
+    }
+    const parsed = parseExport(raw);
+    if (!parsed.ok) return setError(parsed.error);
+    await repo.replaceAll(exportToDump(parsed.file));
+  };
 
   const setAnswer = (key: string, patch: Partial<Answer>) => setAnswers({ ...answers, [key]: { ...answers[key]!, ...patch } });
   const anyNever = Object.values(answers).some((a) => a.mode === 'never');
@@ -79,6 +96,9 @@ export function Onboarding({ repo }: { repo: Repo }) {
             <p>Know what your CX-5 needs next, and when. Everything stays on this phone.</p>
             <InstallHint />
             <button type="button" class="btn btn-primary btn-block" onClick={next}>Get started</button>
+            <button type="button" class="btn-text" onClick={() => restoreInput.current?.click()}>Restore from backup file</button>
+            <input ref={restoreInput} type="file" accept="application/json,.json" class="visually-hidden" aria-label="Choose backup file"
+              onChange={(e) => { const i = e.currentTarget as HTMLInputElement; void restoreFromFile(i.files?.[0]); i.value = ''; }} />
             <button type="button" class="btn-text" disabled title="Available once cloud sync is built">Restore from GitHub (coming soon)</button>
           </>
         )}
