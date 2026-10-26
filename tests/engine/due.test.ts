@@ -143,3 +143,22 @@ describe('health score', () => {
     expect(bad.health).toBe(0);
   });
 });
+
+describe('intervalUsage', () => {
+  it('reports distance and time used since the item was last done', async () => {
+    const { intervalUsage } = await import('../../src/engine/due');
+    const r = computeDue(input({ today: '2026-04-10', records: [record('2026-01-10', 45_000, ['oil'])], readings: [reading('2026-04-10', 48_000)] }));
+    const oil = find(r, 'oil');
+    const u = intervalUsage(oil, r.mileage.miles, '2026-04-10');
+    expect(u.distance).toEqual({ used: 3000, total: 7500 });
+    expect(u.time).toEqual({ used: 90, total: 365 });
+  });
+
+  it('reports only the limits an item has, and nothing without history', async () => {
+    const { intervalUsage } = await import('../../src/engine/due');
+    const r = computeDue(input({ today: '2026-04-10', records: [record('2026-01-10', 45_000, ['spark_plugs'])] }));
+    expect(intervalUsage(find(r, 'spark_plugs'), 46_000, '2026-04-10')).toEqual({ distance: { used: 1000, total: 40_000 } });
+    const unknown = computeDue(input({ today: '2026-04-10' }));
+    expect(intervalUsage(find(unknown, 'oil'), 0, '2026-04-10')).toEqual({});
+  });
+});

@@ -96,3 +96,30 @@ Where the spec was ambiguous, the simplest option that keeps data safe was chose
 - **Dashboard title** is the car's nickname; the trim line and sync status sit under it.
 - **Fixes found during the screenshot review:** tabs now open scrolled to the top (they used to keep the previous tab's scroll position); toasts sit above the start button instead of over it; the spend chart opens on the latest month with spend; interval copy reads "Every 7,500 mi or 12 months" instead of "7,500 mi / None".
 - **App icon** redrawn to match: chrome dial, cabin background, Soul Red needle.
+
+## Mazda Canada schedule (seed version 2)
+
+- **Canada follows Mazda's Schedule 2**, the harder-use schedule, so the seed now uses those intervals in km and has no separate severe values. The driving-style switch only affects items where the owner sets severe intervals.
+- **Confirmed from Mazda Canada's CX-5 maintenance sheet and the 2023 Canadian owner's manual:**
+  - Oil and filter, tire rotation and fluid-level checks: every 8,000 km or 6 months.
+  - Brake inspection: every 24,000 km or 12 months.
+  - Cabin air filter: every 32,000 km or 24 months.
+  - Drive belts: inspect every 48,000 km or 36 months.
+  - Engine air filter: replace every 56,000 km.
+  - 2.5T spark plugs: every 64,000 km.
+  - Coolant: first at 200,000 km or 10 years, then every 100,000 km or 5 years. The 2022 sheet says 192,000/96,000; the 2023 manual's figure is used since it matches the model year.
+- **Not confirmed:** brake fluid replacement for Canada. It is set to 24 months, the more conservative of the figures found, and its note says to check the owner's manual. Battery, wipers and tread checks are not on Mazda's schedule and are kept as sensible extras.
+- **Sources** were read through search results, because `www.mazda.ca` and `www.mazdausa.com` are blocked by this environment's network policy. Allowing those hosts would let the official PDFs be read directly.
+- **New item:** "Fluid level check" (inspect).
+- **Engine:** `firstDueMonths` joins `firstDueMiles`, so coolant on a new car is first due at 10 years, then every 5. Both apply only to a "never, car is new" starting point.
+- **Units:** the seed is defined in km. A vehicle set to miles gets the same intervals converted and rounded to the nearest 500 mi (8,000 km becomes 5,000 mi). Onboarding now defaults to kilometres.
+- **Existing installs upgrade once** (`Settings.seedVersion`). Built-in items still at the old defaults move to the Canadian values; items the owner edited are left alone and named in a toast; custom items are never touched. Added items get a fixed id (`<vehicleId>:<key>`) so two synced devices upgrading separately produce the same row. The "Review your schedule" prompt returns after the upgrade.
+- **Changing units now converts the data:** odometer readings, service odometers, starting points, purchase odometer, intervals (to a tidy 500) and the due-soon distance (to 100). It used to relabel only, which would have left an install set up in miles showing wrong numbers in km. The vehicle sheet asks before converting.
+
+## UI improvements after the redesign
+
+- **Item sheet:** one segmented bar per limit ("6,200 of 8,000 km", "2 of 6 months"), so it is clear which limit makes the item due; Mark done and Edit share the row at full width.
+- **Log service:** service chips that are overdue or due soon come first, with their status lamp; screen readers hear "overdue" or "due soon".
+- **Odometer sheet:** shows the last reading and today's estimate under the input.
+- **History:** a month header shows the month's total when it has more than one paid visit.
+- **Schedule:** rows show the projected date, like the dashboard.

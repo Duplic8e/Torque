@@ -103,7 +103,10 @@ export function computeItemDue(
       : lastDone.source === 'purchase' && item.firstDueMiles !== undefined
         ? item.firstDueMiles
         : lastDone.odometer + intervalMiles;
-  const dueDate = intervalMonths === undefined ? undefined : addMonths(lastDone.date, intervalMonths);
+  const dueDate =
+    intervalMonths === undefined
+      ? undefined
+      : addMonths(lastDone.date, lastDone.source === 'purchase' && item.firstDueMonths !== undefined ? item.firstDueMonths : intervalMonths);
 
   const milesLeft = dueMiles === undefined ? undefined : dueMiles - mileage.miles;
   const daysLeft = dueDate === undefined ? undefined : daysBetween(today, dueDate);
@@ -156,4 +159,27 @@ export function computeDue(input: DueInput): DueResult {
       .map((item) => computeItemDue(item, lastDoneFor(item, records), severe, mileage, today, settings)),
   );
   return { mileage, items, health: healthScore(items) };
+}
+
+export interface AxisUsage {
+  used: number;
+  total: number;
+}
+
+/**
+ * How much of each limit is used since the item was last done: distance in the vehicle's units and time in
+ * days. An item is due when either runs out, so showing both says which one is driving it.
+ */
+export function intervalUsage(item: ItemDue, estMiles: number, today: ISODate): { distance?: AxisUsage; time?: AxisUsage } {
+  const last = item.lastDone;
+  if (!last) return {};
+  const out: { distance?: AxisUsage; time?: AxisUsage } = {};
+  if (item.dueMiles !== undefined && item.dueMiles > last.odometer) {
+    out.distance = { used: Math.max(0, estMiles - last.odometer), total: item.dueMiles - last.odometer };
+  }
+  if (item.dueDate !== undefined) {
+    const total = daysBetween(last.date, item.dueDate);
+    if (total > 0) out.time = { used: Math.max(0, daysBetween(last.date, today)), total };
+  }
+  return out;
 }

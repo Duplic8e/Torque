@@ -40,6 +40,12 @@ export function OdometerSheet() {
           setWarning(null);
         }}
       />
+      {due.mileage.lastReading && (
+        <p class="sheet-hint">
+          Last reading {fmtNum(due.mileage.lastReading.value)} {vehicle.units} on {fmtDateShort(due.mileage.lastReading.date)}.
+          {due.mileage.isEstimated && ` Estimated today: about ${fmtNum(due.mileage.miles)} ${vehicle.units}.`}
+        </p>
+      )}
       <DateInput label="Date" value={date} onChange={(v) => { setDate(v); setTouched(true); setWarning(null); }} />
       {warning && (
         <div class="warning" role="alert">

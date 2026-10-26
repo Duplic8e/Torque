@@ -34,7 +34,7 @@ describe('runOnboarding', () => {
 
     const due = (await repo.computeForVehicle(v.id, '2026-10-26'))!;
     const get = (k: string) => due.items.find((i) => i.key === k)!;
-    expect(get('oil').dueMiles).toBe(35_500);
+    expect(get('oil').dueMiles).toBe(33_000); // 28,000 + 5,000 mi (Mazda Canada's 8,000 km)
     expect(get('cabin_filter').unknownBaseline).toBe(true);
     expect(get('cabin_filter').status).toBe('soon');
   });

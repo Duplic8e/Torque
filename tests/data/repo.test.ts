@@ -45,15 +45,16 @@ describe('repo', () => {
     await repo.setBaseline(oil!.id, { date: '2025-06-01', odometer: 38_000, source: 'entered' });
     const rec = await repo.addRecord({ vehicleId, date: '2026-01-10', odometer: 45_000, itemKeys: ['oil'] });
 
+    // Seeded oil interval is Mazda Canada's 8,000 km, which is 5,000 mi for this vehicle set to miles.
     const dueMiles = async () => (await repo.computeForVehicle(vehicleId, '2026-02-01'))!.items.find((i) => i.key === 'oil')!.dueMiles;
-    expect(await dueMiles()).toBe(52_500);
+    expect(await dueMiles()).toBe(50_000);
 
     await repo.deleteRecord(rec.id);
     expect(await repo.listRecords(vehicleId)).toHaveLength(0);
-    expect(await dueMiles()).toBe(45_500);
+    expect(await dueMiles()).toBe(43_000);
 
     await repo.restoreRecord(rec.id);
-    expect(await dueMiles()).toBe(52_500);
+    expect(await dueMiles()).toBe(50_000);
   });
 
   it('counts records since backup', async () => {
@@ -65,9 +66,12 @@ describe('repo', () => {
   it('switching to Severe recalculates immediately', async () => {
     await repo.addRecord({ vehicleId, date: '2026-01-10', odometer: 45_000, itemKeys: ['oil'] });
     const oil = async () => (await repo.computeForVehicle(vehicleId, '2026-02-01'))!.items.find((i) => i.key === 'oil')!;
-    expect((await oil()).dueMiles).toBe(52_500);
-    await repo.updateVehicle(vehicleId, { drivingStyle: 'severe' });
+    // Schedule 2 has no separate severe values, so give oil one to switch to.
+    const oilItem = (await repo.listItems(vehicleId)).find((i) => i.key === 'oil')!;
+    await repo.updateItem(oilItem.id, { severeMiles: 3000 });
     expect((await oil()).dueMiles).toBe(50_000);
+    await repo.updateVehicle(vehicleId, { drivingStyle: 'severe' });
+    expect((await oil()).dueMiles).toBe(48_000);
   });
 
   it('adds custom items with a unique key', async () => {
@@ -107,5 +111,34 @@ describe('backup round trip', () => {
     await repo.deleteRecord(rec.id);
     await repo.mergeAll(before);
     expect(await repo.listRecords(vehicleId)).toHaveLength(0);
+  });
+});
+
+describe('convertUnits', () => {
+  it('converts every stored distance from miles to km and keeps due dates consistent', async () => {
+    // vehicle from beforeEach is in miles
+    await repo.updateVehicle(vehicleId, { purchaseOdometer: 10 });
+    await repo.addReading(vehicleId, '2026-10-01', 30_000);
+    await repo.addRecord({ vehicleId, date: '2026-09-01', odometer: 29_000, itemKeys: ['oil'] });
+    const oilItem = (await repo.listItems(vehicleId)).find((i) => i.key === 'oil')!;
+    expect(oilItem.intervalMiles).toBe(5000);
+
+    await repo.convertUnits(vehicleId, 'km');
+
+    expect((await repo.getVehicle())!.units).toBe('km');
+    expect((await repo.getVehicle())!.purchaseOdometer).toBe(16);
+    expect((await repo.listReadings(vehicleId))[0]!.value).toBe(48_280);
+    expect((await repo.listRecords(vehicleId))[0]!.odometer).toBe(46_671);
+    const oil = (await repo.listItems(vehicleId)).find((i) => i.key === 'oil')!;
+    expect(oil.intervalMiles).toBe(8000); // 5,000 mi -> 8,047 km -> tidy 8,000
+    expect((await repo.getSettings()).dueSoonMiles).toBe(800);
+    const due = (await repo.computeForVehicle(vehicleId, '2026-10-01'))!.items.find((i) => i.key === 'oil')!;
+    expect(due.dueMiles).toBe(46_671 + 8000);
+  });
+
+  it('is a no-op when the units already match', async () => {
+    await repo.addReading(vehicleId, '2026-10-01', 30_000);
+    await repo.convertUnits(vehicleId, 'mi');
+    expect((await repo.listReadings(vehicleId))[0]!.value).toBe(30_000);
   });
 });

@@ -27,19 +27,23 @@ export function VehicleSheet() {
   };
 
   const save = async () => {
+    const switching = units !== vehicle.units;
+    const unitName = units === 'km' ? 'kilometres' : 'miles';
+    if (switching && !window.confirm(`Convert all odometer readings and intervals to ${unitName}?`)) return;
     await repo.updateVehicle(vehicle.id, {
       nickname: nickname.trim() || 'CX-5',
       year,
-      units,
       vin: vin.trim() || undefined,
       plate: plate.trim() || undefined,
       oilSpec: oilSpec.trim() || undefined,
       tireSize: tireSize.trim() || undefined,
       purchaseDate: purchaseDate || undefined,
-      purchaseOdometer,
+      // When switching units, the stored value is converted below; a value typed in the same save is ignored.
+      purchaseOdometer: switching ? vehicle.purchaseOdometer : purchaseOdometer,
     });
+    if (switching) await repo.convertUnits(vehicle.id, units);
     ui.closeSheet();
-    ui.showToast({ message: 'Vehicle saved' });
+    ui.showToast({ message: switching ? `Vehicle saved and converted to ${unitName}` : 'Vehicle saved' });
   };
 
   return (
@@ -57,7 +61,7 @@ export function VehicleSheet() {
       <DateInput label="Purchase date" value={purchaseDate} onChange={t(setPurchaseDate)} />
       <NumberInput label="Odometer at purchase" value={purchaseOdometer} onChange={t(setPurchaseOdometer)} />
       <Segmented label="Units" value={units} options={[{ value: 'mi', label: 'Miles' }, { value: 'km', label: 'Kilometres' }]} onChange={t(setUnits)} />
-      {units !== vehicle.units && <p class="muted">Changing units only changes the labels. Existing numbers are not converted.</p>}
+      {units !== vehicle.units && <p class="muted">Saving converts every odometer reading, service record and interval to {units === 'km' ? 'kilometres' : 'miles'}.</p>}
       <button type="button" class="btn btn-primary btn-block" onClick={() => void save()}>Save</button>
     </BottomSheet>
   );

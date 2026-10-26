@@ -4,6 +4,7 @@ import { checkOdometer, type MileagePoint } from '../engine/mileage';
 import { computeDue, type DueResult } from '../engine/due';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
 import { TorqueDB } from './schema';
+import { CURRENT_SEED_VERSION, planScheduleUpgrade } from './schedule-upgrade';
 import { seedItems } from './seed-cx5-turbo';
 import type { Attachment, Baseline, ID, ISODate, OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from './types';
 
@@ -80,8 +81,8 @@ export function createRepo(db: TorqueDB) {
     };
     await db.transaction('rw', db.vehicles, db.items, db.settings, async () => {
       await db.vehicles.add(vehicle);
-      await db.items.bulkAdd(seedItems(vehicle.id, now));
-      if (!(await db.settings.get('settings'))) await db.settings.put({ ...DEFAULT_SETTINGS, updatedAt: now });
+      await db.items.bulkAdd(seedItems(vehicle.id, now, vehicle.units));
+      if (!(await db.settings.get('settings'))) await db.settings.put({ ...DEFAULT_SETTINGS, seedVersion: CURRENT_SEED_VERSION, updatedAt: now });
     });
     return vehicle;
   }
@@ -279,6 +280,69 @@ export function createRepo(db: TorqueDB) {
     });
   }
 
+  /**
+   * Upgrades the built-in schedule once per seed version (to Mazda Canada's Schedule 2). Returns the names
+   * of items left alone because the owner had edited them, or null when nothing was due.
+   */
+  async function upgradeSchedule(vehicleId: ID): Promise<string[] | null> {
+    const settings = await getSettings();
+    if ((settings.seedVersion ?? 1) >= CURRENT_SEED_VERSION) return null;
+    const vehicle = await db.vehicles.get(vehicleId);
+    if (!vehicle) return null;
+    const now = nowIso();
+    const plan = planScheduleUpgrade(await db.items.where('vehicleId').equals(vehicleId).toArray(), vehicle);
+    await db.transaction('rw', db.items, db.settings, async () => {
+      for (const u of plan.updates) {
+        // Dexie's update drops keys set to undefined, which clears the old severe values.
+        await db.items.update(u.id, { ...u.patch, updatedAt: now });
+      }
+      for (const a of plan.additions) {
+        if (!(await db.items.get(a.id))) await db.items.add({ ...a, updatedAt: now });
+      }
+      const current = await getSettings();
+      await db.settings.put({ ...current, seedVersion: CURRENT_SEED_VERSION, scheduleReviewed: false, updatedAt: now });
+    });
+    return plan.kept;
+  }
+
+  /**
+   * Switches a vehicle between miles and km, converting every stored distance: readings, service odometers,
+   * starting points, purchase odometer, intervals and the due-soon threshold. Intervals round to a tidy 500 and
+   * the threshold to 100; actual odometer values round to the nearest whole unit.
+   */
+  async function convertUnits(vehicleId: ID, to: Vehicle['units']): Promise<void> {
+    const vehicle = await db.vehicles.get(vehicleId);
+    if (!vehicle || vehicle.units === to) return;
+    const factor = to === 'km' ? 1.609344 : 1 / 1.609344;
+    const exact = (n: number) => Math.round(n * factor);
+    const tidy = (n: number | undefined, step: number) => (n === undefined ? undefined : Math.max(step, Math.round((n * factor) / step) * step));
+    const now = nowIso();
+    await db.transaction('rw', [db.vehicles, db.items, db.records, db.odometer, db.settings], async () => {
+      await db.vehicles.update(vehicleId, {
+        units: to,
+        purchaseOdometer: vehicle.purchaseOdometer === undefined ? undefined : exact(vehicle.purchaseOdometer),
+        updatedAt: now,
+      });
+      for (const r of await db.odometer.where('vehicleId').equals(vehicleId).toArray()) {
+        await db.odometer.update(r.id, { value: exact(r.value), updatedAt: now });
+      }
+      for (const r of await db.records.where('vehicleId').equals(vehicleId).toArray()) {
+        await db.records.update(r.id, { odometer: exact(r.odometer), updatedAt: now });
+      }
+      for (const i of await db.items.where('vehicleId').equals(vehicleId).toArray()) {
+        await db.items.update(i.id, {
+          intervalMiles: tidy(i.intervalMiles, 500),
+          severeMiles: tidy(i.severeMiles, 500),
+          firstDueMiles: tidy(i.firstDueMiles, 500),
+          baseline: i.baseline ? { ...i.baseline, odometer: exact(i.baseline.odometer) } : undefined,
+          updatedAt: now,
+        });
+      }
+      const settings = await getSettings();
+      await db.settings.put({ ...settings, dueSoonMiles: tidy(settings.dueSoonMiles, 100) ?? settings.dueSoonMiles, updatedAt: now });
+    });
+  }
+
   async function markBackedUp(): Promise<void> {
     await updateSettings({ lastBackupAt: nowIso(), recordsSinceBackup: 0 });
   }
@@ -292,7 +356,7 @@ export function createRepo(db: TorqueDB) {
 
   return {
     addAttachment, getAttachments, setAttachmentBlob, removeAttachment,
-    dumpAll, replaceAll, mergeAll, markBackedUp, resetAll,
+    dumpAll, replaceAll, mergeAll, markBackedUp, resetAll, upgradeSchedule, convertUnits,
     getSettings, updateSettings,
     getVehicle, createVehicle, updateVehicle,
     listItems, updateItem, addCustomItem, setBaseline,
