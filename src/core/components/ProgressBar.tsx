@@ -1,6 +1,6 @@
 import type { Status } from '../../engine/due';
 
-/** Thin gauge-style bar. `progress` runs 0 to 1.2; the bar fills at 1. */
+/** Ten-segment bar, read like the fuel gauge. `progress` runs 0 to 1.2; the bar is full at 1. */
 export function ProgressBar({ progress, status, label }: { progress: number; status: Status; label: string }) {
   const pct = Math.min(1, progress) * 100;
   return (

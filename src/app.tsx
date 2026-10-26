@@ -52,6 +52,11 @@ export function App() {
   const route = useRoute();
   const raw = useLive(loadAll);
 
+  // Each tab opens at its top, not at the previous tab's scroll position.
+  useEffect(() => {
+    document.querySelector('.app-main')?.scrollTo(0, 0);
+  }, [route]);
+
   // Ask iOS to keep our data under storage pressure; the result is shown in Settings > About.
   useEffect(() => {
     void navigator.storage?.persist?.().catch(() => undefined);
@@ -107,7 +112,7 @@ export function App() {
   return (
     <AppDataContext.Provider value={data}>
       <UiContext.Provider value={ui}>
-        <header class="app-header"><h1>{TITLES[route]}</h1></header>
+        <header class="app-header"><h1>{route === 'dashboard' ? data.vehicle.nickname : TITLES[route]}</h1></header>
         <main class="app-main">
           {route === 'dashboard' && <Dashboard />}
           {route === 'schedule' && <Schedule />}

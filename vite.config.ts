@@ -21,8 +21,8 @@ export default defineConfig({
         display: 'standalone',
         start_url: './',
         scope: './',
-        theme_color: '#0e0f12',
-        background_color: '#0e0f12',
+        theme_color: '#0e1317',
+        background_color: '#0e1317',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -30,7 +30,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest,woff2}'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
       },

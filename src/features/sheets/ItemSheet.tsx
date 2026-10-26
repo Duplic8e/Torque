@@ -7,7 +7,11 @@ import { useAppData, useUi } from '../../core/context';
 import { fmtDateLong, fmtDateShort, fmtNum, remainingLabel } from '../../core/format';
 import type { ServiceItem } from '../../data/types';
 
-const orNone = (n: number | undefined, unit: string) => (n === undefined ? 'None' : `${fmtNum(n)} ${unit}`);
+/** "Every 7,500 mi or 12 months", naming only the limits the item has. */
+function intervalLabel(miles: number | undefined, months: number | undefined, units: string): string {
+  const parts = [miles !== undefined && `${fmtNum(miles)} ${units}`, months !== undefined && `${months} month${months === 1 ? '' : 's'}`].filter(Boolean);
+  return parts.length ? `Every ${parts.join(' or ')}` : 'No interval set';
+}
 
 export function ItemSheet({ itemKey }: { itemKey: string }) {
   const { items, due, records, vehicle, repo } = useAppData();
@@ -48,8 +52,11 @@ export function ItemSheet({ itemKey }: { itemKey: string }) {
           <dl class="facts">
             <dt>Interval{severe ? ' (severe)' : ''}</dt>
             <dd>
-              {orNone(severe && item.severeMiles !== undefined ? item.severeMiles : item.intervalMiles, vehicle.units)} /{' '}
-              {orNone(severe && item.severeMonths !== undefined ? item.severeMonths : item.intervalMonths, 'mo')}
+              {intervalLabel(
+                severe && item.severeMiles !== undefined ? item.severeMiles : item.intervalMiles,
+                severe && item.severeMonths !== undefined ? item.severeMonths : item.intervalMonths,
+                vehicle.units,
+              )}
             </dd>
             {item.notes && (<><dt>Notes</dt><dd>{item.notes}</dd></>)}
           </dl>

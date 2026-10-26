@@ -1,4 +1,4 @@
-import { HealthRing } from '../../core/components/HealthRing';
+import { ClusterGauge } from '../../core/components/ClusterGauge';
 import { InstallHint } from '../../core/components/InstallHint';
 import { OdometerDisplay } from '../../core/components/OdometerDisplay';
 import { ProgressBar } from '../../core/components/ProgressBar';
@@ -19,16 +19,58 @@ export function Dashboard() {
   const needsBackup = !sync.configured && backupNeeded(settings, vehicle.createdAt, today);
   const ui = useUi();
   const { mileage } = due;
-  const upNext = due.items.filter((i) => i.status !== 'inspect').slice(0, 3);
+  const tracked = due.items.filter((i) => i.status !== 'inspect');
+  const upNext = tracked.slice(0, 3);
   const stale = mileage.lastReading !== null && mileage.daysSinceReading > NUDGE_AFTER_DAYS;
   const unsure = due.items.filter((i) => i.unknownBaseline).length;
+  const counts = {
+    overdue: tracked.filter((i) => i.status === 'overdue').length,
+    soon: tracked.filter((i) => i.status === 'soon').length,
+    ok: tracked.filter((i) => i.status === 'ok').length,
+  };
 
   return (
     <>
+      <div class="hero-meta">
+        <span class="muted">{vehicle.year} {vehicle.trim} 2.5 Turbo</span>
+        {sync.description && (
+          <a class={`sync-line sync-${sync.description.tone}`} href={hrefFor('settings')} aria-label={`Cloud sync: ${sync.description.label}`}>
+            <span class="sync-dot" aria-hidden="true" /> {sync.description.label}
+          </a>
+        )}
+      </div>
+
+      <ClusterGauge score={due.health} worst={worstStatus(due.items)}>
+        <button type="button" class="odo-button" onClick={() => ui.openSheet({ type: 'odometer' })}>
+          <OdometerDisplay value={mileage.miles} />
+          <span class="odo-unit">{vehicle.units}{mileage.isEstimated ? ' est.' : ''}</span>
+          <span class="visually-hidden">, tap to update odometer</span>
+        </button>
+        <span class="hub-caption">
+          {mileage.lastReading ? `Updated ${agoLabel(mileage.lastReading.date, today)}` : 'No reading yet'}
+          {mileage.confidence === 'low' ? ', low confidence' : ''}
+        </span>
+        <span class="hub-health" aria-label={`Health score ${due.health} out of 100`}>
+          Health <strong class="num">{due.health}</strong>
+        </span>
+      </ClusterGauge>
+
+      <nav class="lamps" aria-label="Status summary">
+        <a class="lamp lamp-overdue" href={hrefFor('schedule')}><span class="lamp-dot" aria-hidden="true" /><span class="num">{counts.overdue}</span> overdue</a>
+        <a class="lamp lamp-soon" href={hrefFor('schedule')}><span class="lamp-dot" aria-hidden="true" /><span class="num">{counts.soon}</span> due soon</a>
+        <a class="lamp lamp-ok" href={hrefFor('schedule')}><span class="lamp-dot" aria-hidden="true" /><span class="num">{counts.ok}</span> fine</a>
+      </nav>
+
+      {stale && (
+        <button type="button" class="nudge" onClick={() => ui.openSheet({ type: 'odometer' })}>
+          Last reading was {agoLabel(mileage.lastReading!.date, today)}. Update the odometer to keep dates accurate.
+        </button>
+      )}
+
       <InstallHint />
 
       {!settings.scheduleReviewed && (
-        <section class="card callout">
+        <section class="callout">
           <strong>Review your schedule</strong>
           <p class="muted">The default intervals are typical Mazda figures. Check them against your maintenance booklet.</p>
           <div class="row">
@@ -39,15 +81,15 @@ export function Dashboard() {
       )}
 
       {sync.description?.banner && (
-        <section class="card callout">
+        <section class="callout callout-alert">
           <strong>Cloud sync has not worked for over a day</strong>
           <p class="muted">{sync.description.label}. Your data is safe on this phone, but it is not backed up.</p>
-          <a class="btn btn-secondary" href={`${hrefFor('settings')}`}>Fix in settings</a>
+          <a class="btn btn-secondary" href={hrefFor('settings')}>Fix in settings</a>
         </section>
       )}
 
       {needsBackup && (
-        <section class="card callout">
+        <section class="callout">
           <strong>Back up your data</strong>
           <p class="muted">
             {settings.lastBackupAt ? `Last backup ${agoLabel(settings.lastBackupAt.slice(0, 10), today)}.` : 'You have not made a backup yet.'} Export one to
@@ -57,51 +99,27 @@ export function Dashboard() {
         </section>
       )}
 
-      <section class="card hero">
-        <div class="hero-top">
-          <div>
-            <div class="hero-name">{vehicle.nickname}</div>
-            <div class="muted">{vehicle.year} {vehicle.trim} 2.5 Turbo</div>
-          </div>
-          <HealthRing score={due.health} worst={worstStatus(due.items)} />
-        </div>
-        <button type="button" class="odo-button" onClick={() => ui.openSheet({ type: 'odometer' })}>
-          <OdometerDisplay value={mileage.miles} />
-          <span class="odo-unit muted">{vehicle.units}{mileage.isEstimated ? ' · est.' : ''}</span>
-          <span class="visually-hidden">, tap to update odometer</span>
-        </button>
-        {sync.description && (
-          <a class={`sync-line sync-${sync.description.tone}`} href={hrefFor('settings')} aria-label={`Cloud sync: ${sync.description.label}`}>
-            <span class="sync-dot" aria-hidden="true" /> {sync.description.label}
-          </a>
-        )}
-        <div class="muted">
-          {mileage.lastReading ? `Updated ${agoLabel(mileage.lastReading.date, today)}` : 'No odometer reading yet'}
-          {mileage.confidence === 'low' ? ' · low confidence' : ''}
-        </div>
-        {stale && (
-          <button type="button" class="btn btn-secondary" onClick={() => ui.openSheet({ type: 'odometer' })}>
-            It has been a while. Update the odometer
-          </button>
-        )}
-      </section>
-
       <h2 class="section-title">Up next</h2>
-      {upNext.length === 0 && <p class="muted">Nothing to show. Add services in the schedule.</p>}
-      {upNext.map((i) => (
-        <button key={i.key} type="button" class="card item-card" onClick={() => ui.openSheet({ type: 'item', key: i.key })}>
-          <div class="item-card-top">
-            <strong>{i.name}</strong>
-            <StatusChip status={i.status} unknown={i.unknownBaseline} />
-          </div>
-          <ProgressBar progress={i.progress} status={i.status} label={`${i.name}: ${Math.round(Math.min(1, i.progress) * 100)}% of interval used`} />
-          <div class="item-card-bottom muted">
-            <span>{remainingLabel(i, vehicle.units)}</span>
-            {i.projectedDate && !i.unknownBaseline && <span>around {fmtDateShort(i.projectedDate)}</span>}
-          </div>
-        </button>
-      ))}
-      {unsure > 0 && <p class="muted">{unsure} item{unsure === 1 ? '' : 's'} have no history yet. Log a service to start tracking them.</p>}
+      {upNext.length === 0 ? (
+        <p class="muted">Nothing to show. Add services in the schedule.</p>
+      ) : (
+        <div class="group">
+          {upNext.map((i) => (
+            <button key={i.key} type="button" class="list-row" onClick={() => ui.openSheet({ type: 'item', key: i.key })}>
+              <span class="row-top">
+                <span class="row-title">{i.name}</span>
+                <StatusChip status={i.status} unknown={i.unknownBaseline} />
+              </span>
+              <ProgressBar progress={i.progress} status={i.status} label={`${i.name}: ${Math.round(Math.min(1, i.progress) * 100)}% of interval used`} />
+              <span class="row-bottom">
+                <span>{remainingLabel(i, vehicle.units)}</span>
+                {i.projectedDate && !i.unknownBaseline && <span class="num">around {fmtDateShort(i.projectedDate)}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {unsure > 0 && <p class="footnote">{unsure} item{unsure === 1 ? ' has' : 's have'} no history yet. Log a service to start tracking {unsure === 1 ? 'it' : 'them'}.</p>}
 
       <div class="quick-actions">
         <button type="button" class="btn btn-secondary" onClick={() => ui.openSheet({ type: 'odometer' })}>Update odometer</button>

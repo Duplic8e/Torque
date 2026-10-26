@@ -23,7 +23,9 @@ const monthShort = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateStri
 
 /** Single-series monthly spend: thin bars with rounded data-ends, anchored to the baseline. */
 export function MonthlyBars({ data }: { data: { month: string; total: number }[] }) {
-  const [sel, setSel] = useState(data.length - 1);
+  // Open on the latest month that has spend, so the readout starts with something useful.
+  const lastWithSpend = data.reduce((found, d, i) => (d.total > 0 ? i : found), data.length - 1);
+  const [sel, setSel] = useState(lastWithSpend);
   const max = niceMax(Math.max(...data.map((d) => d.total)));
   const slot = PLOT_W / data.length;
   const base = M.top + PLOT_H;
