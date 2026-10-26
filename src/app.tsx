@@ -7,6 +7,7 @@ import { UpdateToast } from './core/components/UpdateToast';
 import { todayLocal } from './core/dates';
 import { useLive } from './core/useLive';
 import { getRepo } from './data/repo';
+import { getSync } from './sync';
 import { computeDue } from './engine/due';
 import { Costs } from './features/costs/Costs';
 import { Dashboard } from './features/dashboard/Dashboard';
@@ -52,6 +53,17 @@ export function App() {
   // Ask iOS to keep our data under storage pressure; the result is shown in Settings > About.
   useEffect(() => {
     void navigator.storage?.persist?.().catch(() => undefined);
+  }, []);
+
+  // Cloud sync: pull on launch, then again whenever the app returns to the foreground or the network comes back.
+  useEffect(() => {
+    const sync = getSync();
+    void sync.start();
+    const detach = sync.attachBrowserListeners();
+    return () => {
+      detach();
+      sync.dispose();
+    };
   }, []);
   const [sheet, setSheet] = useState<SheetState | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);

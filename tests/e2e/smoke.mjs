@@ -25,7 +25,8 @@ await page.getByRole('button', { name: 'Next' }).click(); // style
 await shot('1-style');
 await page.getByRole('button', { name: 'Next' }).click(); // services
 await shot('2-services');
-await page.getByRole('button', { name: 'Finish' }).click();
+await page.getByRole('button', { name: 'Next' }).click(); // services -> sync
+await page.getByRole('button', { name: 'Skip and finish' }).click();
 
 await page.getByText('Up next').waitFor();
 await page.getByText('Review your schedule').waitFor();

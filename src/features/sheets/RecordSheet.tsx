@@ -3,6 +3,7 @@ import { BottomSheet } from '../../core/components/BottomSheet';
 import { useAppData, useUi } from '../../core/context';
 import { fmtDateLong, fmtMoney, fmtNum } from '../../core/format';
 import { recordCost } from '../../engine/costs';
+import { getSync } from '../../sync';
 
 export function RecordSheet({ id }: { id: string }) {
   const { repo, records, items, vehicle } = useAppData();
@@ -14,7 +15,7 @@ export function RecordSheet({ id }: { id: string }) {
   useEffect(() => {
     if (!record) return;
     let urls: string[] = [];
-    void repo.getAttachments(record.attachmentIds).then((list) => {
+    void getSync().loadPhotoBlobs(record.attachmentIds).then((list) => {
       const loaded = list.map((a) => ({ id: a.id, url: URL.createObjectURL(a.blob) }));
       urls = loaded.map((p) => p.url);
       setPhotos(loaded);

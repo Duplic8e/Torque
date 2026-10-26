@@ -5,6 +5,8 @@ import { useAppData, useUi } from '../../core/context';
 import { dumpToExport } from '../../data/backup-io';
 import { agoLabel, fmtNum } from '../../core/format';
 import { shareOrDownload } from '../../core/files';
+import { getSync } from '../../sync';
+import { SyncSection } from './SyncSection';
 import { backupFileName, csvFileName, parseExport, recordsToCsv } from '../../engine/backup';
 
 interface StorageInfo {
@@ -32,6 +34,8 @@ export function Settings() {
   const exportJson = async () => {
     setBusy(true);
     try {
+      // Photos that live only in the cloud must be on this device before they can go into a backup.
+      if (getSync().getConfig()) await getSync().hydrateAllPhotos().catch(() => undefined);
       const file = await dumpToExport(await repo.dumpAll(), new Date().toISOString());
       const out = new File([JSON.stringify(file)], backupFileName(today), { type: 'application/json' });
       const result = await shareOrDownload(out);
@@ -64,6 +68,7 @@ export function Settings() {
   };
 
   const reset = async () => {
+    await getSync().disconnect(); // stop syncing and forget the token before erasing
     await repo.resetAll();
     window.location.hash = '#/dashboard';
   };
@@ -87,6 +92,8 @@ export function Settings() {
         <NumberInput label={`Miles (${vehicle.units})`} value={settings.dueSoonMiles} onChange={(v) => void repo.updateSettings({ dueSoonMiles: v ?? 0 })} />
         <NumberInput label="Days" value={settings.dueSoonDays} onChange={(v) => void repo.updateSettings({ dueSoonDays: v ?? 0 })} />
       </section>
+
+      <SyncSection />
 
       <section class="card">
         <h2 class="section-title">Backup</h2>

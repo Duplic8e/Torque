@@ -51,3 +51,19 @@ Where the spec was ambiguous, the simplest option that keeps data safe was chose
 - **Receipt photos** are resized to 1600 px and re-encoded as JPEG 0.7 before storing; removed photos are tombstoned like everything else.
 - **Storage:** `navigator.storage.persist()` is requested on launch and the result is shown in Settings > About.
 - **Settings** gained Backup, About and Danger zone (type RESET). Calendar and notification settings arrive in Phase 5, sync in 4b.
+
+## Phase 4b
+
+- **Device-local store:** Dexie v2 adds a `kv` table holding the sync config (including the token), sync state and the list of uploaded photos. Backups and sync payloads are built from explicit table lists that never include it; `resetAll` clears it, and the Reset flow disconnects sync first so the running manager cannot write its state back. A test asserts the token is absent from the cloud data, a backup export, the manager status, request URLs and every console method.
+- **Cloud file:** `torque/data.json` holds vehicles, items, records, readings, settings and photo *metadata*; photo bytes are separate `torque/attachments/<id>.jpg` files, uploaded once each and before the data file points at them. Remote photos download when first viewed and are cached locally; a backup export first downloads any photos the device is missing.
+- **Reading safely:** the provider reads the file's sha from the directory listing first, then the content with the raw media type (so files over 1 MB load). If the file changes in between, the later write is rejected with 409 and retried, so a newer cloud version is never silently overwritten. Both 409 and 422 count as "changed under us"; up to 3 retries, then the failure is reported and the changes stay pending.
+- **Merge:** by id, newest `updatedAt` wins, ties keep the local row, tombstones win like any other row, so deletions stay deleted. Only winning remote rows are written locally and nothing is pushed when the merged result equals the cloud copy, so an idle sync makes no commit.
+- **Triggers:** on launch, when the app returns to the foreground, when the network returns, 5 seconds after the last change (the timer restarts on each change), and a retry a minute after a network or server failure. Auth and not-found errors wait for the user. Calls made during a sync fold into one follow-up run.
+- **Pending count** counts transactions, not rows, so one user action is one change. It is persisted, so changes made offline survive an app restart and push on the next launch.
+- **Status wording:** "Synced 2 min ago", "3 changes pending", "Offline: 3 changes pending", "Sync failed: token expired or not allowed" (with a Fix hint), and the dashboard banner appears only after 24 hours of continuous failure. With sync connected, the 30-day/5-record backup nudge is hidden.
+- **Private repos only:** connecting to a public repository is refused, because the data is personal. This is an addition to the spec.
+- **Existing data:** onboarding refuses a repo that already holds Torque data (use Restore from GitHub instead). From Settings, connecting to such a repo asks before merging.
+- **Restore from GitHub** is on the welcome screen next to "Restore from backup file". The token field is a password input and is cleared from the form after connecting.
+- **Replace all** (backup import) with sync on behaves as a merge with the cloud on the next sync, because rows missing locally come back from the cloud. Use Disconnect first for a true replace.
+- **Photos in the sync path** are read with `blob.arrayBuffer()` rather than `FileReader`, which also fixes a latent issue in backups.
+- **Browser tests:** `tests/e2e/sync.mjs` runs connect (wrong token, then right token), debounced push, offline queue and flush, reset, restore with a photo, tombstones and the token checks against a simulated GitHub via request interception.

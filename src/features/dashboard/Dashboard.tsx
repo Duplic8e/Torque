@@ -8,12 +8,15 @@ import { agoLabel, fmtDateShort, remainingLabel } from '../../core/format';
 import { backupNeeded } from '../../engine/backup';
 import { worstStatus } from '../../engine/health';
 import { hrefFor } from '../../router';
+import { useSyncStatus } from '../../sync';
 
 const NUDGE_AFTER_DAYS = 14;
 
 export function Dashboard() {
   const { vehicle, due, today, settings, repo } = useAppData();
-  const needsBackup = backupNeeded(settings, vehicle.createdAt, today);
+  const sync = useSyncStatus();
+  // With cloud sync on, the manual backup nudge gives way to the sync-failure banner.
+  const needsBackup = !sync.configured && backupNeeded(settings, vehicle.createdAt, today);
   const ui = useUi();
   const { mileage } = due;
   const upNext = due.items.filter((i) => i.status !== 'inspect').slice(0, 3);
@@ -32,6 +35,14 @@ export function Dashboard() {
             <a class="btn btn-secondary" href={hrefFor('schedule')}>Open schedule</a>
             <button type="button" class="btn-text" onClick={() => void repo.updateSettings({ scheduleReviewed: true })}>Dismiss</button>
           </div>
+        </section>
+      )}
+
+      {sync.description?.banner && (
+        <section class="card callout">
+          <strong>Cloud sync has not worked for over a day</strong>
+          <p class="muted">{sync.description.label}. Your data is safe on this phone, but it is not backed up.</p>
+          <a class="btn btn-secondary" href={`${hrefFor('settings')}`}>Fix in settings</a>
         </section>
       )}
 
@@ -58,6 +69,11 @@ export function Dashboard() {
           <OdometerDisplay value={mileage.miles} />
           <span class="odo-unit muted">{vehicle.units}{mileage.isEstimated ? ' · est.' : ''}</span>
         </button>
+        {sync.description && (
+          <a class={`sync-line sync-${sync.description.tone}`} href={hrefFor('settings')} aria-label={`Cloud sync: ${sync.description.label}`}>
+            <span class="sync-dot" aria-hidden="true" /> {sync.description.label}
+          </a>
+        )}
         <div class="muted">
           {mileage.lastReading ? `Updated ${agoLabel(mileage.lastReading.date, today)}` : 'No odometer reading yet'}
           {mileage.confidence === 'low' ? ' · low confidence' : ''}
