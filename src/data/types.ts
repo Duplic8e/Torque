@@ -107,5 +107,7 @@ export interface Settings {
   lastBackupAt?: string;
   recordsSinceBackup: number;
   schemaVersion: number;
+  /** The one-time "Review your schedule" prompt has been dismissed. */
+  scheduleReviewed?: boolean;
   updatedAt: string;
 }
