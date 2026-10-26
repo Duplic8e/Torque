@@ -57,7 +57,7 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 }
 .select-chip[aria-pressed='true'] { background: var(--color-primary-fill); border-color: var(--color-primary-fill); color: var(--color-primary-ink); }
 .segmented { display: flex; padding: 3px; gap: 3px; background: var(--color-bg); border: var(--hairline); border-radius: var(--radius-control); }
-.segmented button { flex: 1; min-width: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--color-text-muted); font-weight: 500; padding: 0 var(--space-2); cursor: pointer; min-height: 38px; transition: background var(--motion-fast), color var(--motion-fast); }
+.segmented button { flex: 1; min-width: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--color-text-muted); font-weight: 500; padding: 0 var(--space-2); cursor: pointer; min-height: var(--tap-min); transition: background var(--motion-fast), color var(--motion-fast); }
 .segmented button[aria-checked='true'] { background: var(--color-surface-raised); color: var(--color-text); font-weight: 600; box-shadow: var(--bezel-highlight), 0 1px 3px rgb(0 0 0 / 0.4); }
 .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: var(--tap-min); margin-bottom: var(--space-2); }
 .toggle {
@@ -190,8 +190,9 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .fab-scrim { position: fixed; inset: 0; z-index: 19; background: rgb(8 11 14 / 0.4); }
 
 /* ---------- bottom sheet ---------- */
-.sheet-backdrop { position: fixed; inset: 0; background: rgb(6 9 12 / 0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 50; display: flex; align-items: flex-end; animation: fade-in var(--motion-base) ease-out; }
-@keyframes fade-in { from { opacity: 0; } }
+.sheet-backdrop { position: fixed; inset: 0; background: rgb(6 9 12 / 0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 50; display: flex; align-items: flex-end; animation: dim-in var(--motion-base) ease-out; }
+/* fade the dimming only, never the sheet itself, so its text is at full contrast from the first frame */
+@keyframes dim-in { from { background-color: rgb(6 9 12 / 0); } }
 .sheet {
   width: 100%; max-height: 92dvh; display: flex; flex-direction: column; outline: none;
   background: var(--color-surface); border-radius: 26px 26px 0 0;
