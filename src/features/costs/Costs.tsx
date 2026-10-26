@@ -22,7 +22,7 @@ export function Costs() {
 
   if (c.lifetime === 0) {
     return (
-      <section class="card empty">
+      <section class="empty">
         <h2>No costs yet</h2>
         <p class="muted">Add a cost when you log a service and your spending charts appear here.</p>
         <button type="button" class="btn btn-primary" onClick={() => ui.openSheet({ type: 'log' })}>Log service</button>
@@ -35,7 +35,7 @@ export function Costs() {
     <>
       <div class="stat-grid">
         <div class="card stat"><span class="muted">This year</span><strong class="num">{fmtMoney(c.thisYear)}</strong></div>
-        <div class="card stat"><span class="muted">Last 12 months</span><strong class="num">{fmtMoney(c.last12Months)}</strong></div>
+        <div class="card stat"><span class="muted">12 months</span><strong class="num">{fmtMoney(c.last12Months)}</strong></div>
         <div class="card stat"><span class="muted">Lifetime</span><strong class="num">{fmtMoney(c.lifetime)}</strong></div>
       </div>
       <div class="stat-grid two">

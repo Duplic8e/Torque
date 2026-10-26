@@ -82,3 +82,17 @@ Where the spec was ambiguous, the simplest option that keeps data safe was chose
 - **PWA checks** (`tests/e2e/pwa.mjs`): Chromium's installability check passes with no errors, the manifest and icons are complete, pinch zoom is allowed, the app opens and records a service with the network off and survives a cold start, and a simulated redeploy shows "Update available" and switches to the new build when tapped. Lighthouse's separate PWA category no longer exists, so the browser's own installability check is used instead.
 - **Service worker registration bug (found by the PWA check, fixed):** registration happens inside the update-toast component, which since Phase 3 rendered only in the main app shell. A first-time visitor sat on the splash and onboarding screens with no service worker, so the app was neither installable nor offline-capable until after onboarding and a reload. The toast now renders at the root in `main.tsx`, so the worker registers on every first load. `tests/e2e/pwa.mjs` covers this by opening the app with the network off and adding a record before any reload.
 - **Not verifiable here:** behaviour on a real iPhone (install, safe areas, share sheet, badge permission, input zoom) and sync against the real GitHub API.
+
+## UI overhaul: "Night cluster"
+
+- **Concept first:** `docs/ui-concept.md` holds the palette, type, layout wireframe, principles, and a table of the generic defaults the first draft fell into and how each was revised. It follows Anthropic's frontend-design skill guidance, read from its public repo because the plugin could not be installed in this environment.
+- **Dark only.** The owner asked to keep dark mode, so the light theme that followed the system setting is gone. One palette means one set of contrast checks, and the app looks the same in a dark garage at night or in sunlight.
+- **Type:** Barlow for text and Barlow Condensed (tabular figures) for readings: odometer, costs, dates, intervals. Both are bundled as Latin-only woff2 (about 110 KB total) and precached, so the app looks the same offline. Body text went from 16 to 17 px.
+- **Soul Red is reserved** for the needle and the start (+) button. Primary buttons are now white on cabin, so red never competes with the status lamps.
+- **Status lamps:** chips are a glowing dot plus text ("Fine", "Due soon", "Overdue", "Check"). "OK" became "Fine" to match the dashboard's lamp row.
+- **Grouped lists replace per-row cards** in Up next, Schedule and History; panels stay for settings and forms.
+- **Segmented progress bars** (ten segments, like the fuel gauge) replace the thin bars. The `.gauge-fill` element is unchanged underneath; the segments are a CSS mask.
+- **The cluster** (`ClusterGauge`) shows the health score as a dimmed arc in the worst item's status colour, with tick marks and a Soul Red needle that sweeps to the score on launch. The odometer sits in the hub and stays tappable. The welcome screen reuses the dial with a neutral arc, since there is no status yet.
+- **Dashboard title** is the car's nickname; the trim line and sync status sit under it.
+- **Fixes found during the screenshot review:** tabs now open scrolled to the top (they used to keep the previous tab's scroll position); toasts sit above the start button instead of over it; the spend chart opens on the latest month with spend; interval copy reads "Every 7,500 mi or 12 months" instead of "7,500 mi / None".
+- **App icon** redrawn to match: chrome dial, cabin background, Soul Red needle.

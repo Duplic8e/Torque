@@ -1,4 +1,5 @@
 import { useRef, useState } from 'preact/hooks';
+import { ClusterGauge } from '../../core/components/ClusterGauge';
 import { DateInput, Field, Segmented, TextInput } from '../../core/components/Fields';
 import { InstallHint } from '../../core/components/InstallHint';
 import { NumberInput } from '../../core/components/NumberInput';
@@ -110,20 +111,26 @@ export function Onboarding({ repo }: { repo: Repo }) {
       <div class="onboarding-body">
         {name === 'welcome' && (
           <>
-            <h1>Torque</h1>
-            <p>Know what your CX-5 needs next, and when. Everything stays on this phone.</p>
-            <InstallHint />
-            <button type="button" class="btn btn-primary btn-block" onClick={next}>Get started</button>
-            <button type="button" class="btn-text" onClick={() => restoreInput.current?.click()}>Restore from backup file</button>
-            <input ref={restoreInput} type="file" accept="application/json,.json" class="visually-hidden" aria-label="Choose backup file"
-              onChange={(e) => { const i = e.currentTarget as HTMLInputElement; void restoreFromFile(i.files?.[0]); i.value = ''; }} />
-            <button type="button" class="btn-text" onClick={() => setRestoring(!restoring)}>Restore from GitHub</button>
-            {restoring && (
-              <section class="card">
-                <p class="muted">Enter the repository and token you used before. Your records, readings and photos come back.</p>
-                <SyncForm mode="restore" />
-              </section>
-            )}
+            <div class="welcome">
+              <ClusterGauge score={100} worst="neutral">
+                <h1 class="wordmark">Torque</h1>
+              </ClusterGauge>
+              <p class="welcome-copy">Know what your CX-5 needs next, and when. Everything stays on this phone.</p>
+              <InstallHint />
+              <div class="welcome-actions">
+                <button type="button" class="btn btn-primary btn-block" onClick={next}>Get started</button>
+                <button type="button" class="btn-text" onClick={() => restoreInput.current?.click()}>Restore from backup file</button>
+                <input ref={restoreInput} type="file" accept="application/json,.json" class="visually-hidden" aria-label="Choose backup file"
+                  onChange={(e) => { const i = e.currentTarget as HTMLInputElement; void restoreFromFile(i.files?.[0]); i.value = ''; }} />
+                <button type="button" class="btn-text" onClick={() => setRestoring(!restoring)}>Restore from GitHub</button>
+                {restoring && (
+                  <section class="card">
+                    <p class="muted">Enter the repository and token you used before. Your records, readings and photos come back.</p>
+                    <SyncForm mode="restore" />
+                  </section>
+                )}
+              </div>
+            </div>
           </>
         )}
 

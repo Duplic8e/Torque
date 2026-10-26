@@ -80,7 +80,7 @@ export function Settings() {
     <>
       <section class="card">
         <h2 class="section-title">Vehicle</h2>
-        <p>{vehicle.nickname} · {vehicle.year} {vehicle.trim} 2.5 Turbo</p>
+        <p class="vehicle-line"><strong>{vehicle.nickname}</strong><span class="muted">{vehicle.year} {vehicle.trim} 2.5 Turbo</span></p>
         <button type="button" class="btn btn-secondary" onClick={() => ui.openSheet({ type: 'vehicle' })}>Edit vehicle details</button>
         <Segmented
           label="Driving style"

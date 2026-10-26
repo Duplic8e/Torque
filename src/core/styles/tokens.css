@@ -1,33 +1,41 @@
-/* Design tokens. The UI restyle pass should only need to edit this file and
-   component CSS. Dark is the default ("garage at night"); light follows the
-   system setting. */
+/* Design tokens: "Night cluster" (see docs/ui-concept.md). Dark only.
+   A restyle should only need to edit this file and the component CSS. */
 :root {
-  color-scheme: dark light;
+  color-scheme: dark;
 
-  /* surfaces */
-  --color-bg: #0e0f12;
-  --color-surface: #17181d;
-  --color-surface-raised: #1f2127;
-  --color-border: #2a2d35;
-  --color-text: #f2f3f5;
-  --color-text-muted: #9a9fab;
+  /* palette */
+  --cabin: #0e1317; /* app background */
+  --dash: #151c22; /* grouped surfaces, sheets */
+  --dash-raised: #1c252d; /* pressed rows, selected segments, inputs */
+  --bezel: #26313a; /* hairlines, tracks */
+  --chrome: #c5ced6; /* secondary text, icons */
+  --gauge-white: #eef2f5; /* primary text, numerals */
+  --soul-red: #d21f3c; /* the needle and the start button only */
 
-  /* brand accent (Soul Red): primary action and health ring only */
-  --color-accent: #b3162b;
+  /* roles */
+  --color-bg: var(--cabin);
+  --color-surface: var(--dash);
+  --color-surface-raised: var(--dash-raised);
+  --color-border: var(--bezel);
+  --color-text: var(--gauge-white);
+  --color-text-muted: #9aa6b1;
+  --color-chrome: var(--chrome);
+  --color-accent: var(--soul-red);
   --color-accent-contrast: #ffffff;
+  --color-primary-fill: var(--gauge-white); /* primary buttons: white on cabin */
+  --color-primary-ink: var(--cabin);
 
-  /* status colours: never branding */
-  --color-ok: #2fbf71;
-  --color-soon: #f2a900;
-  --color-overdue: #e5484d;
-  --color-inspect: #8b8f99;
-  /* the same statuses as text: darker in light mode so small labels reach 4.5:1 */
+  /* status lamps, kept apart from Soul Red so a warning never reads as decoration */
+  --color-ok: #3dd68c;
+  --color-soon: #f5a524;
+  --color-overdue: #f25c5c;
+  --color-inspect: #8b97a3;
   --color-ok-ink: var(--color-ok);
   --color-soon-ink: var(--color-soon);
-  --color-overdue-ink: var(--color-overdue);
-  --color-inspect-ink: var(--color-inspect);
+  --color-overdue-ink: #ff7a7a;
+  --color-inspect-ink: #a9b4be;
 
-  /* categorical series for charts: fixed order, never cycled (validated palette, dark steps) */
+  /* categorical chart series: fixed order, never cycled (validated dark steps) */
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
@@ -44,26 +52,35 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /* shape */
-  --radius-card: 16px;
+  /* shape: hierarchy, not one radius for everything */
+  --radius-group: 18px; /* grouped lists and panels */
+  --radius-card: var(--radius-group);
+  --radius-control: 12px; /* inputs, segmented controls */
   --radius-chip: 999px;
-  --border-thin: 1px solid var(--color-border);
+  --hairline: 1px solid var(--bezel);
+  --border-thin: var(--hairline);
+  --bezel-highlight: inset 0 1px 0 rgb(255 255 255 / 0.05); /* satin edge on raised surfaces */
 
-  /* type */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --font-size-body: 16px;
-  --font-size-small: 13px;
-  --font-size-title: 22px;
-  --font-size-odometer: 40px;
+  /* type: Barlow for text, Barlow Condensed for readings */
+  --font-sans: 'Barlow', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-reading: 'Barlow Condensed', 'Barlow', -apple-system, system-ui, sans-serif;
+  --font-size-caption: 13px;
+  --font-size-small: 15px;
+  --font-size-body: 17px;
+  --font-size-row: 18px;
+  --font-size-title: 28px;
+  --font-size-odometer: 56px;
 
   /* layout */
   --tap-min: 44px;
-  --tabbar-height: 56px;
+  --tabbar-height: 58px;
   --header-height: 52px;
 
   /* motion */
   --motion-fast: 150ms;
   --motion-base: 250ms;
+  --motion-sweep: 900ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* safe areas */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -72,31 +89,10 @@
   --safe-right: env(safe-area-inset-right, 0px);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --color-bg: #f5f5f7;
-    --color-surface: #ffffff;
-    --color-surface-raised: #ffffff;
-    --color-border: #dcdde3;
-    --color-text: #15161a;
-    --color-text-muted: #5f6470;
-    --color-ok-ink: #0f7a43;
-    --color-soon-ink: #8a5800;
-    --color-overdue-ink: #c1272d;
-    --color-inspect-ink: #5f6470;
-    --series-1: #2a78d6;
-    --series-2: #eb6834;
-    --series-3: #1baf7a;
-    --series-4: #eda100;
-    --series-5: #e87ba4;
-    --series-6: #008300;
-    --series-7: #6250d6;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
     --motion-base: 0ms;
+    --motion-sweep: 0ms;
   }
 }

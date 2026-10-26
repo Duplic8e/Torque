@@ -1,3 +1,4 @@
+import { ProgressBar } from '../../core/components/ProgressBar';
 import { StatusChip } from '../../core/components/StatusChip';
 import { useAppData, useUi } from '../../core/context';
 import { remainingLabel } from '../../core/format';
@@ -16,12 +17,15 @@ export function Schedule() {
   const disabled = items.filter((i) => !i.enabled);
 
   const row = (i: ItemDue) => (
-    <button key={i.key} type="button" class="card list-row" onClick={() => ui.openSheet({ type: 'item', key: i.key })}>
-      <div class="item-card-top">
-        <strong>{i.name}</strong>
+    <button key={i.key} type="button" class="list-row" onClick={() => ui.openSheet({ type: 'item', key: i.key })}>
+      <span class="row-top">
+        <span class="row-title">{i.name}</span>
         <StatusChip status={i.status} unknown={i.unknownBaseline} />
-      </div>
-      <span class="muted">{remainingLabel(i, vehicle.units)}</span>
+      </span>
+      {!i.unknownBaseline && (
+        <ProgressBar progress={i.progress} status={i.status} label={`${i.name}: ${Math.round(Math.min(1, i.progress) * 100)}% of interval used`} />
+      )}
+      <span class="row-bottom">{remainingLabel(i, vehicle.units)}</span>
     </button>
   );
 
@@ -32,19 +36,21 @@ export function Schedule() {
         return rows.length === 0 ? null : (
           <section key={g.title}>
             <h2 class="section-title">{g.title}</h2>
-            {rows.map(row)}
+            <div class="group">{rows.map(row)}</div>
           </section>
         );
       })}
       {disabled.length > 0 && (
         <section>
           <h2 class="section-title">Disabled</h2>
-          {disabled.map((i) => (
-            <button key={i.key} type="button" class="card list-row" onClick={() => ui.openSheet({ type: 'item', key: i.key })}>
-              <strong>{i.name}</strong>
-              <span class="muted">Not tracked</span>
-            </button>
-          ))}
+          <div class="group">
+            {disabled.map((i) => (
+              <button key={i.key} type="button" class="list-row" onClick={() => ui.openSheet({ type: 'item', key: i.key })}>
+                <span class="row-title">{i.name}</span>
+                <span class="row-bottom">Not tracked</span>
+              </button>
+            ))}
+          </div>
         </section>
       )}
       <button type="button" class="btn btn-secondary btn-block" onClick={() => ui.openSheet({ type: 'addItem' })}>

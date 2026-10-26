@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import './core/styles/fonts.css';
 import './core/styles/tokens.css';
 import './core/styles/base.css';
 import './core/styles/components.css';

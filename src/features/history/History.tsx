@@ -28,7 +28,7 @@ export function History() {
 
   if (live.length === 0) {
     return (
-      <section class="card empty">
+      <section class="empty">
         <h2>No services yet</h2>
         <p class="muted">Every oil change, rotation and repair you log shows up here.</p>
         <button type="button" class="btn btn-primary" onClick={() => ui.openSheet({ type: 'log' })}>Log your first service</button>
@@ -62,7 +62,7 @@ export function History() {
       </div>
 
       {groups.length === 0 && (
-        <section class="card empty">
+        <section class="empty">
           <p class="muted">Nothing matches those filters.</p>
           {filtering && <button type="button" class="btn btn-secondary" onClick={() => setFilter(NO_FILTER)}>Clear filters</button>}
         </section>
@@ -71,21 +71,26 @@ export function History() {
       {groups.map((g) => (
         <section key={g.month}>
           <h2 class="section-title">{fmtMonth(`${g.month}-01`)}</h2>
-          {g.records.map((r) => {
-            const cost = recordCost(r);
-            return (
-              <button key={r.id} type="button" class="card list-row" onClick={() => ui.openSheet({ type: 'record', id: r.id })}>
-                <div class="item-card-top">
-                  <strong>{fmtDateShort(r.date)}</strong>
-                  <span class="num muted">{fmtNum(r.odometer)} {vehicle.units}{cost > 0 ? ` · ${fmtMoney(cost)}` : ''}</span>
-                </div>
-                <div class="chips">
-                  {r.itemKeys.length === 0 ? <span class="tag">Note</span> : r.itemKeys.map((k) => <span key={k} class="tag">{nameOf(k)}</span>)}
-                </div>
-                {(r.shop || r.diy) && <span class="muted">{r.diy ? 'DIY' : r.shop}</span>}
-              </button>
-            );
-          })}
+          <div class="group">
+            {g.records.map((r) => {
+              const cost = recordCost(r);
+              return (
+                <button key={r.id} type="button" class="list-row" onClick={() => ui.openSheet({ type: 'record', id: r.id })}>
+                  <span class="row-top">
+                    <span class="row-title">{fmtDateShort(r.date)}</span>
+                    <span class="row-reading num">
+                      {fmtNum(r.odometer)} {vehicle.units}
+                      {cost > 0 && <span class="row-cost">{fmtMoney(cost)}</span>}
+                    </span>
+                  </span>
+                  <span class="chips">
+                    {r.itemKeys.length === 0 ? <span class="tag">Note</span> : r.itemKeys.map((k) => <span key={k} class="tag">{nameOf(k)}</span>)}
+                  </span>
+                  {(r.shop || r.diy) && <span class="row-bottom">{r.diy ? 'DIY' : r.shop}</span>}
+                </button>
+              );
+            })}
+          </div>
         </section>
       ))}
     </>
