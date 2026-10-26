@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface Props {
   title: string;
@@ -21,9 +21,38 @@ export function BottomSheet({ title, onClose, dirty = false, children }: Props) 
     onClose();
   };
 
-  useEffect(() => {
+  // Remember what had focus before the sheet appeared (read during the first render, before any
+  // autofocus inside the sheet can steal it) so focus can go back there when the sheet closes.
+  const opener = useRef(document.activeElement as HTMLElement | null);
+  // Layout effects run before the sheet is first painted, so there is no moment where it is visible
+  // but keys still go to the page behind it.
+  useLayoutEffect(() => {
     panel.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && requestClose();
+    return () => {
+      const el = opener.current;
+      if (el && el !== document.body && document.contains(el)) el.focus();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return requestClose();
+      if (e.key !== 'Tab' || !panel.current) return;
+      // Keep Tab inside the sheet: wrap from the last control to the first and back.
+      const focusable = [...panel.current.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')]
+        .filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
+      if (focusable.length === 0) return e.preventDefault();
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === panel.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps

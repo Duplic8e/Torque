@@ -3,18 +3,20 @@ import { AppDataContext, UiContext, type AppData, type SheetState, type Toast as
 import { Fab } from './core/components/Fab';
 import { TabBar } from './core/components/TabBar';
 import { Toast } from './core/components/Toast';
-import { UpdateToast } from './core/components/UpdateToast';
+import { applyBadge } from './core/badge';
 import { todayLocal } from './core/dates';
 import { useLive } from './core/useLive';
 import { getRepo } from './data/repo';
 import { getSync } from './sync';
 import { computeDue } from './engine/due';
+import { attentionCount } from './engine/health';
 import { Costs } from './features/costs/Costs';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { History } from './features/history/History';
 import { Onboarding } from './features/onboarding/Onboarding';
 import { Schedule } from './features/schedule/Schedule';
 import { Settings } from './features/settings/Settings';
+import { VehicleSheet } from './features/sheets/VehicleSheet';
 import { AddItemSheet } from './features/sheets/AddItemSheet';
 import { ItemSheet } from './features/sheets/ItemSheet';
 import { ImportSheet } from './features/sheets/ImportSheet';
@@ -68,6 +70,18 @@ export function App() {
   const [sheet, setSheet] = useState<SheetState | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
 
+  // Statuses depend on today's date, so recompute when the day changes while the app sits open or suspended.
+  const [day, setDay] = useState(todayLocal());
+  useEffect(() => {
+    const refresh = () => setDay(todayLocal());
+    document.addEventListener('visibilitychange', refresh);
+    const timer = setInterval(refresh, 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      clearInterval(timer);
+    };
+  }, []);
+
   const ui: UiApi = useMemo(
     () => ({ openSheet: setSheet, closeSheet: () => setSheet(null), showToast: setToast }),
     [],
@@ -76,10 +90,16 @@ export function App() {
 
   const data: AppData | null = useMemo(() => {
     if (!raw || !raw.vehicle) return null;
-    const today = todayLocal();
+    const today = day;
     const { vehicle, items, records, readings, settings } = raw;
     return { repo, vehicle, items, records, readings, settings, today, due: computeDue({ today, vehicle, items, records, readings, settings }) };
-  }, [raw]);
+  }, [raw, day]);
+
+  const badgeEnabled = data?.settings.badgeEnabled ?? false;
+  const attention = data ? attentionCount(data.due.items) : 0;
+  useEffect(() => {
+    if (data) void applyBadge(badgeEnabled, attention);
+  }, [data !== null, badgeEnabled, attention]);
 
   if (!raw) return <div class="splash" aria-busy="true">Torque</div>;
   if (!data) return <Onboarding repo={repo} />;
@@ -87,7 +107,7 @@ export function App() {
   return (
     <AppDataContext.Provider value={data}>
       <UiContext.Provider value={ui}>
-        <header class="app-header">{TITLES[route]}</header>
+        <header class="app-header"><h1>{TITLES[route]}</h1></header>
         <main class="app-main">
           {route === 'dashboard' && <Dashboard />}
           {route === 'schedule' && <Schedule />}
@@ -103,8 +123,8 @@ export function App() {
         {sheet?.type === 'import' && <ImportSheet file={sheet.file} />}
         {sheet?.type === 'item' && <ItemSheet itemKey={sheet.key} />}
         {sheet?.type === 'addItem' && <AddItemSheet />}
+        {sheet?.type === 'vehicle' && <VehicleSheet />}
         {toast && <Toast toast={toast} onDismiss={dismissToast} />}
-        <UpdateToast />
       </UiContext.Provider>
     </AppDataContext.Provider>
   );

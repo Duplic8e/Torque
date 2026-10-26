@@ -22,7 +22,8 @@ export type SheetState =
   | { type: 'record'; id: string }
   | { type: 'import'; file: ExportFile }
   | { type: 'item'; key: string }
-  | { type: 'addItem' };
+  | { type: 'addItem' }
+  | { type: 'vehicle' };
 
 export interface Toast {
   message: string;

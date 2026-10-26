@@ -34,6 +34,10 @@ export function LogServiceSheet({ mode, presetKeys, editId, duplicateId }: Props
   const [odometer, setOdometer] = useState<number | undefined>(editing ? editing.odometer : Math.round(due.mileage.miles) || undefined);
   const [keys, setKeys] = useState<string[]>(source ? source.itemKeys : presetKeys);
   const [cost, setCost] = useState(source?.totalCost !== undefined ? String(source.totalCost) : '');
+  const [perItem, setPerItem] = useState(Object.keys(source?.itemCosts ?? {}).length > 0);
+  const [itemCosts, setItemCosts] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(source?.itemCosts ?? {}).map(([k, v]) => [k, String(v)])),
+  );
   const [shop, setShop] = useState(source?.shop ?? '');
   const [diy, setDiy] = useState(source?.diy ?? false);
   const [parts, setParts] = useState(source?.parts ?? '');
@@ -85,12 +89,20 @@ export function LogServiceSheet({ mode, presetKeys, editId, duplicateId }: Props
     if (odometer === undefined) return setError('Enter the odometer reading.');
     if (!note && keys.length === 0) return setError('Pick at least one service.');
     if (note && !notes.trim()) return setError('Write a note.');
-    const parsed = cost.trim() === '' ? undefined : Number(cost.replace(/[^0-9.]/g, ''));
+    const money = (text: string | undefined): number | undefined => {
+      if (!text || text.trim() === '') return undefined;
+      const n = Number(text.replace(/[^0-9.]/g, ''));
+      return Number.isFinite(n) ? n : undefined;
+    };
+    // Per-service costs add up to the visit total, so every total in the app stays consistent.
+    const perItemCosts = Object.fromEntries(keys.flatMap((k) => (money(itemCosts[k]) === undefined ? [] : [[k, money(itemCosts[k])!]])));
+    const usePerItem = !note && perItem && keys.length > 1 && Object.keys(perItemCosts).length > 0;
     const fields = {
       date,
       odometer,
       itemKeys: note ? [] : keys,
-      totalCost: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
+      totalCost: usePerItem ? Object.values(perItemCosts).reduce((a, b) => a + b, 0) : money(cost),
+      itemCosts: usePerItem ? perItemCosts : undefined,
       shop: shop.trim() || undefined,
       diy: note ? false : diy,
       parts: parts.trim() || undefined,
@@ -137,7 +149,12 @@ export function LogServiceSheet({ mode, presetKeys, editId, duplicateId }: Props
         </fieldset>
       )}
 
-      {!note && <TextInput label="Total cost" value={cost} inputMode="decimal" placeholder="Optional" onChange={touch(setCost)} />}
+      {!note && keys.length > 1 && <Toggle label="Enter a cost for each service" checked={perItem} onChange={touch(setPerItem)} />}
+      {!note && !(perItem && keys.length > 1) && <TextInput label="Total cost" value={cost} inputMode="decimal" placeholder="Optional" onChange={touch(setCost)} />}
+      {!note && perItem && keys.length > 1 && keys.map((k) => (
+        <TextInput key={k} label={`Cost: ${items.find((i) => i.key === k)?.name ?? k}`} value={itemCosts[k] ?? ''} inputMode="decimal" placeholder="Optional"
+          onChange={touch((v: string) => setItemCosts({ ...itemCosts, [k]: v }))} />
+      ))}
       {!note && <TextInput label="Shop" value={shop} list="shops" placeholder="Optional" onChange={touch(setShop)} />}
       <datalist id="shops">{shops.map((s) => <option key={s} value={s} />)}</datalist>
       {!note && <Toggle label="Did it myself (DIY)" checked={diy} onChange={touch(setDiy)} />}
