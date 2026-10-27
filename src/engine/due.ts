@@ -1,6 +1,7 @@
 import { addDays, addMonths, daysBetween } from '../core/dates';
-import type { Category, ISODate, OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from '../data/types';
+import type { Category, ISODate, OdometerReading, SeasonalTires, ServiceItem, ServiceRecord, Settings, TireSet, Vehicle } from '../data/types';
 import { healthScore } from './health';
+import { nextSwap, swapName } from './seasonal';
 import { defaultRatePerDay, estimateMileage, type MileageEstimate, type MileagePoint } from './mileage';
 
 export type Status = 'ok' | 'soon' | 'overdue' | 'inspect';
@@ -29,6 +30,8 @@ export interface ItemDue {
   lastDone: LastDone | null;
   /** "Not sure" at onboarding: treated as due now. */
   unknownBaseline: boolean;
+  /** Seasonal tire swap only: the set on now, the set due next, and when the current set went on. */
+  seasonal?: { mounted: TireSet; next: TireSet; since: ISODate };
 }
 
 export interface DueInput {
@@ -133,6 +136,35 @@ export function computeItemDue(
   return { ...base, status, dueMiles, dueDate, milesLeft, daysLeft, projectedDate, progress, drivenBy, unknownBaseline: false };
 }
 
+/** The seasonal tire swap: due by a calendar date, named for the set that goes on next. */
+export function computeSeasonalDue(
+  item: ServiceItem & { seasonal: SeasonalTires },
+  records: readonly ServiceRecord[],
+  today: ISODate,
+  settings: DueInput['settings'],
+): ItemDue {
+  const record = findLastRecord(item.key, records);
+  const swap = nextSwap(item.seasonal, record, today);
+  const daysLeft = daysBetween(today, swap.dueDate);
+  const total = daysBetween(swap.since, swap.dueDate);
+  const status: Status = daysLeft <= 0 ? 'overdue' : daysLeft <= settings.dueSoonDays ? 'soon' : 'ok';
+  return {
+    key: item.key,
+    name: swapName(swap.next),
+    category: item.category,
+    kind: item.kind,
+    status,
+    dueDate: swap.dueDate,
+    daysLeft,
+    projectedDate: swap.dueDate,
+    progress: total > 0 ? Math.min(MAX_PROGRESS, Math.max(0, daysBetween(swap.since, today) / total)) : 1,
+    drivenBy: 'time',
+    lastDone: record ? { date: record.date, odometer: record.odometer, source: 'record', recordId: record.id } : null,
+    unknownBaseline: false,
+    seasonal: { mounted: swap.mounted, next: swap.next, since: swap.since },
+  };
+}
+
 /** Overdue first, then due soon, then ok, then inspect-only; soonest projected date first within each. */
 export function sortByUrgency(items: readonly ItemDue[]): ItemDue[] {
   return [...items].sort(
@@ -156,7 +188,11 @@ export function computeDue(input: DueInput): DueResult {
   const items = sortByUrgency(
     input.items
       .filter((i) => i.enabled && !i.deletedAt)
-      .map((item) => computeItemDue(item, lastDoneFor(item, records), severe, mileage, today, settings)),
+      .map((item) =>
+        item.seasonal
+          ? computeSeasonalDue({ ...item, seasonal: item.seasonal }, records, today, settings)
+          : computeItemDue(item, lastDoneFor(item, records), severe, mileage, today, settings),
+      ),
   );
   return { mileage, items, health: healthScore(items) };
 }
@@ -171,6 +207,10 @@ export interface AxisUsage {
  * days. An item is due when either runs out, so showing both says which one is driving it.
  */
 export function intervalUsage(item: ItemDue, estMiles: number, today: ISODate): { distance?: AxisUsage; time?: AxisUsage } {
+  if (item.seasonal && item.dueDate) {
+    const total = daysBetween(item.seasonal.since, item.dueDate);
+    return total > 0 ? { time: { used: Math.max(0, daysBetween(item.seasonal.since, today)), total } } : {};
+  }
   const last = item.lastDone;
   if (!last) return {};
   const out: { distance?: AxisUsage; time?: AxisUsage } = {};

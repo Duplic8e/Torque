@@ -41,4 +41,5 @@ npm test                          # unit tests, including sync against a mocked 
 npm run build && npx vite preview --port 4173 &
 node tests/e2e/smoke.mjs          # browser: onboarding, logging, history, costs, backup/restore
 node tests/e2e/sync.mjs           # browser: cloud sync against a simulated GitHub
+node tests/e2e/seasons.mjs        # browser: winter tire swap reminder and warranty card
 ```

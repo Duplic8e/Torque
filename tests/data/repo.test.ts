@@ -142,3 +142,26 @@ describe('convertUnits', () => {
     expect((await repo.listReadings(vehicleId))[0]!.value).toBe(30_000);
   });
 });
+
+describe('seasonal tires', () => {
+  it('creates one swap item with a stable id, turns it off and on, and the row passes validation', async () => {
+    await repo.setSeasonalTires(vehicleId, { winterOn: '11-01', summerOn: '05-01', mounted: 'summer' });
+    let swap = (await repo.listItems(vehicleId)).filter((i) => i.key === 'tire_swap');
+    expect(swap).toHaveLength(1);
+    expect(swap[0]!.id).toBe(`${vehicleId}:tire_swap`);
+    expect(serviceItemSchema.safeParse(swap[0]).success).toBe(true);
+
+    await repo.setSeasonalTires(vehicleId, null);
+    expect((await repo.listItems(vehicleId)).find((i) => i.key === 'tire_swap')?.enabled).toBe(false);
+
+    await repo.setSeasonalTires(vehicleId, { winterOn: '12-01', summerOn: '04-15', mounted: 'winter' });
+    swap = (await repo.listItems(vehicleId)).filter((i) => i.key === 'tire_swap');
+    expect(swap).toHaveLength(1);
+    expect(swap[0]).toMatchObject({ enabled: true, seasonal: { winterOn: '12-01', mounted: 'winter' } });
+  });
+
+  it('rejects malformed month-day values', () => {
+    const bad = { id: 'x', vehicleId, key: 'tire_swap', name: 'x', category: 'Tires', kind: 'replace', enabled: true, isCustom: false, sortOrder: 0, updatedAt: 'now', seasonal: { winterOn: '13-01', summerOn: '05-01', mounted: 'winter' } };
+    expect(serviceItemSchema.safeParse(bad).success).toBe(false);
+  });
+});

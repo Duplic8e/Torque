@@ -9,6 +9,7 @@ import { backupNeeded } from '../../engine/backup';
 import { worstStatus } from '../../engine/health';
 import { hrefFor } from '../../router';
 import { useSyncStatus } from '../../sync';
+import { WarrantyCard } from './WarrantyCard';
 
 const NUDGE_AFTER_DAYS = 14;
 
@@ -125,6 +126,8 @@ export function Dashboard() {
         <button type="button" class="btn btn-secondary" onClick={() => ui.openSheet({ type: 'odometer' })}>Update odometer</button>
         <button type="button" class="btn btn-secondary" onClick={() => ui.openSheet({ type: 'log' })}>Log service</button>
       </div>
+
+      <WarrantyCard />
     </>
   );
 }

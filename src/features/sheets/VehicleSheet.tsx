@@ -58,8 +58,8 @@ export function VehicleSheet() {
       <TextInput label="Plate" value={plate} onChange={t(setPlate)} />
       <TextInput label="Oil spec" value={oilSpec} placeholder="e.g. 0W-20, 5.9 qt" onChange={t(setOilSpec)} />
       <TextInput label="Tire size" value={tireSize} placeholder="e.g. 225/55R19" onChange={t(setTireSize)} />
-      <DateInput label="Purchase date" value={purchaseDate} onChange={t(setPurchaseDate)} />
-      <NumberInput label="Odometer at purchase" value={purchaseOdometer} onChange={t(setPurchaseOdometer)} />
+      <DateInput label="Delivery date (warranty start)" value={purchaseDate} onChange={t(setPurchaseDate)} />
+      <NumberInput label="Odometer at delivery" value={purchaseOdometer} onChange={t(setPurchaseOdometer)} />
       <Segmented label="Units" value={units} options={[{ value: 'mi', label: 'Miles' }, { value: 'km', label: 'Kilometres' }]} onChange={t(setUnits)} />
       {units !== vehicle.units && <p class="muted">Saving converts every odometer reading, service record and interval to {units === 'km' ? 'kilometres' : 'miles'}.</p>}
       <button type="button" class="btn btn-primary btn-block" onClick={() => void save()}>Save</button>

@@ -4,7 +4,7 @@ import { Toggle } from '../../core/components/Fields';
 import { NumberInput } from '../../core/components/NumberInput';
 import { StatusChip } from '../../core/components/StatusChip';
 import { useAppData, useUi } from '../../core/context';
-import { fmtDateLong, fmtDateShort, fmtNum, remainingLabel } from '../../core/format';
+import { fmtDateLong, fmtDateShort, fmtMonthDay, fmtNum, remainingLabel } from '../../core/format';
 import type { ServiceItem } from '../../data/types';
 import { intervalUsage, type AxisUsage, type ItemDue } from '../../engine/due';
 import { ProgressBar } from '../../core/components/ProgressBar';
@@ -67,27 +67,38 @@ export function ItemSheet({ itemKey }: { itemKey: string }) {
                   </>
                 );
               })()}
-              <dl class="facts">
-                <dt>Next due</dt>
-                <dd>
-                  {d.dueMiles !== undefined && `${fmtNum(d.dueMiles)} ${vehicle.units}`}
-                  {d.dueMiles !== undefined && d.dueDate && ' or '}
-                  {d.dueDate && fmtDateLong(d.dueDate)}
-                  {d.unknownBaseline && 'Now'}
-                </dd>
-                <dt>Last done</dt>
-                <dd>{d.lastDone ? `${fmtDateLong(d.lastDone.date)} at ${fmtNum(d.lastDone.odometer)} ${vehicle.units}` : 'Not sure'}</dd>
-              </dl>
+              {d.seasonal ? (
+                <dl class="facts">
+                  <dt>On the car now</dt>
+                  <dd>{d.seasonal.mounted === 'winter' ? 'Winter' : 'Summer'} tires, since {fmtDateLong(d.seasonal.since)}{d.lastDone ? '' : ' (assumed)'}</dd>
+                  <dt>Next swap</dt>
+                  <dd>{d.seasonal.next === 'winter' ? 'Winter' : 'Summer'} tires on by {d.dueDate && fmtDateLong(d.dueDate)}</dd>
+                </dl>
+              ) : (
+                <dl class="facts">
+                  <dt>Next due</dt>
+                  <dd>
+                    {d.dueMiles !== undefined && `${fmtNum(d.dueMiles)} ${vehicle.units}`}
+                    {d.dueMiles !== undefined && d.dueDate && ' or '}
+                    {d.dueDate && fmtDateLong(d.dueDate)}
+                    {d.unknownBaseline && 'Now'}
+                  </dd>
+                  <dt>Last done</dt>
+                  <dd>{d.lastDone ? `${fmtDateLong(d.lastDone.date)} at ${fmtNum(d.lastDone.odometer)} ${vehicle.units}` : 'Not sure'}</dd>
+                </dl>
+              )}
             </div>
           )}
           <dl class="facts">
-            <dt>Interval{severe ? ' (severe)' : ''}</dt>
+            <dt>{item.seasonal ? 'Schedule' : `Interval${severe ? ' (severe)' : ''}`}</dt>
             <dd>
-              {intervalLabel(
-                severe && item.severeMiles !== undefined ? item.severeMiles : item.intervalMiles,
-                severe && item.severeMonths !== undefined ? item.severeMonths : item.intervalMonths,
-                vehicle.units,
-              )}
+              {item.seasonal
+                ? `Winter tires by ${fmtMonthDay(item.seasonal.winterOn)}, summer tires by ${fmtMonthDay(item.seasonal.summerOn)}. Change in Settings.`
+                : intervalLabel(
+                    severe && item.severeMiles !== undefined ? item.severeMiles : item.intervalMiles,
+                    severe && item.severeMonths !== undefined ? item.severeMonths : item.intervalMonths,
+                    vehicle.units,
+                  )}
             </dd>
             {item.notes && (<><dt>Notes</dt><dd>{item.notes}</dd></>)}
           </dl>
@@ -102,9 +113,9 @@ export function ItemSheet({ itemKey }: { itemKey: string }) {
                 ui.openSheet({ type: 'log', presetKeys: [item.key] });
               }}
             >
-              Mark done
+              {item.seasonal ? 'Log swap' : 'Mark done'}
             </button>
-            <button type="button" class="btn btn-secondary" onClick={() => setEditing(true)}>Edit</button>
+            {!item.seasonal && <button type="button" class="btn btn-secondary" onClick={() => setEditing(true)}>Edit</button>}
           </div>
 
           <h3 class="section-title">History</h3>
