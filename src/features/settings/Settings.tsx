@@ -8,6 +8,7 @@ import { agoLabel, fmtNum } from '../../core/format';
 import { shareOrDownload } from '../../core/files';
 import { getSync } from '../../sync';
 import { SyncSection } from './SyncSection';
+import { TiresSection } from './TiresSection';
 import { backupFileName, csvFileName, parseExport, recordsToCsv } from '../../engine/backup';
 
 interface StorageInfo {
@@ -96,6 +97,8 @@ export function Settings() {
         <NumberInput label={`Distance (${vehicle.units})`} value={settings.dueSoonMiles} onChange={(v) => void repo.updateSettings({ dueSoonMiles: v ?? 0 })} />
         <NumberInput label="Days" value={settings.dueSoonDays} onChange={(v) => void repo.updateSettings({ dueSoonDays: v ?? 0 })} />
       </section>
+
+      <TiresSection />
 
       <section class="card">
         <h2 class="section-title">Notifications</h2>

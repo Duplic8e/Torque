@@ -54,6 +54,18 @@ export interface Baseline {
   source: 'purchase' | 'entered';
 }
 
+export type TireSet = 'winter' | 'summer';
+
+/** A seasonal swap between winter and summer tires, due by a fixed date each year rather than an interval. */
+export interface SeasonalTires {
+  /** 'MM-DD': winter tires should be on by this date. */
+  winterOn: string;
+  /** 'MM-DD': summer tires should be on by this date. */
+  summerOn: string;
+  /** The set on the car when this was set up; a logged swap takes over from it. */
+  mounted: TireSet;
+}
+
 export interface ServiceItem extends Syncable {
   id: ID;
   vehicleId: ID;
@@ -70,6 +82,8 @@ export interface ServiceItem extends Syncable {
   firstDueMonths?: number;
   /** Absent = "Not sure": treated as due now. */
   baseline?: Baseline;
+  /** Present on the seasonal tire swap item, which ignores the interval fields. */
+  seasonal?: SeasonalTires;
   enabled: boolean;
   isCustom: boolean;
   notes?: string;

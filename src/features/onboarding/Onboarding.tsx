@@ -194,8 +194,8 @@ export function Onboarding({ repo }: { repo: Repo }) {
               <section class="card">
                 <strong>Purchase details</strong>
                 <p class="muted">For items marked “Never, new”, the clock starts here.</p>
-                <DateInput label="Purchase date" value={purchaseDate} onChange={setPurchaseDate} />
-                <NumberInput label={`Odometer at purchase (${units})`} value={purchaseOdo ?? odometer} onChange={setPurchaseOdo} />
+                <DateInput label="Delivery date" value={purchaseDate} onChange={setPurchaseDate} />
+                <NumberInput label={`Odometer at delivery (${units})`} value={purchaseOdo ?? odometer} onChange={setPurchaseOdo} />
               </section>
             )}
           </>

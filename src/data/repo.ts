@@ -1,12 +1,13 @@
 import type { Table } from 'dexie';
 import { newId } from '../core/ids';
 import { checkOdometer, type MileagePoint } from '../engine/mileage';
+import { TIRE_SWAP_KEY } from '../engine/seasonal';
 import { computeDue, type DueResult } from '../engine/due';
 import { CURRENT_SCHEMA_VERSION } from './migrations';
 import { TorqueDB } from './schema';
-import { CURRENT_SEED_VERSION, planScheduleUpgrade } from './schedule-upgrade';
+import { CURRENT_SEED_VERSION, planScheduleUpgrade, upgradeItemId } from './schedule-upgrade';
 import { seedItems } from './seed-cx5-turbo';
-import type { Attachment, Baseline, ID, ISODate, OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from './types';
+import type { Attachment, Baseline, ID, ISODate, OdometerReading, SeasonalTires, ServiceItem, ServiceRecord, Settings, Vehicle } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 'settings',
@@ -119,6 +120,38 @@ export function createRepo(db: TorqueDB) {
     };
     await db.items.add(item);
     return item;
+  }
+
+  /**
+   * Turns the seasonal tire swap on (creating its item the first time) or off. The item has a fixed id per
+   * vehicle so two devices setting it up separately end up with one item after sync.
+   */
+  async function setSeasonalTires(vehicleId: ID, seasonal: SeasonalTires | null): Promise<void> {
+    const id = upgradeItemId(vehicleId, TIRE_SWAP_KEY);
+    const existing = await db.items.get(id);
+    if (!seasonal) {
+      if (existing) await db.items.update(id, { enabled: false, updatedAt: nowIso() });
+      return;
+    }
+    if (existing) {
+      await db.items.update(id, { seasonal, enabled: true, deletedAt: undefined, updatedAt: nowIso() });
+      return;
+    }
+    const all = await db.items.where('vehicleId').equals(vehicleId).toArray();
+    await db.items.add({
+      id,
+      vehicleId,
+      key: TIRE_SWAP_KEY,
+      name: 'Seasonal tire swap',
+      category: 'Tires',
+      kind: 'replace',
+      seasonal,
+      enabled: true,
+      isCustom: false,
+      notes: 'Swap between winter and summer tires. Log the swap to move the reminder to the next season; the date decides which set went on.',
+      sortOrder: all.reduce((max, i) => Math.max(max, i.sortOrder), -1) + 1,
+      updatedAt: nowIso(),
+    });
   }
 
   /** Onboarding: where an item's clock starts when it has no record. `null` = "Not sure" (due now). */
@@ -359,7 +392,7 @@ export function createRepo(db: TorqueDB) {
     dumpAll, replaceAll, mergeAll, markBackedUp, resetAll, upgradeSchedule, convertUnits,
     getSettings, updateSettings,
     getVehicle, createVehicle, updateVehicle,
-    listItems, updateItem, addCustomItem, setBaseline,
+    listItems, updateItem, addCustomItem, setBaseline, setSeasonalTires,
     listReadings, addReading,
     listRecords, addRecord, updateRecord, deleteRecord, restoreRecord,
     computeForVehicle,

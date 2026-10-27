@@ -12,6 +12,10 @@ const dateFmt = (opts: Intl.DateTimeFormatOptions) => (d: ISODate) =>
 
 export const fmtDateShort = dateFmt({ month: 'short', day: 'numeric' });
 export const fmtDateLong = dateFmt({ month: 'short', day: 'numeric', year: 'numeric' });
+/** 'MM-DD' as "Nov 1". */
+export const fmtMonthDay = (mmdd: string): string => fmtDateShort(`2000-${mmdd}`);
+/** "Mar 2030". */
+export const fmtMonthShort = dateFmt({ month: 'short', year: 'numeric' });
 export const fmtMonth = dateFmt({ month: 'long', year: 'numeric' });
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;

@@ -42,6 +42,7 @@ export class TorqueDB extends Dexie {
 // Zod schemas, used to validate imports and pulled sync data. Each is typed against
 // the hand-written interface so the two cannot drift apart.
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const monthDay = z.string().regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
 const sync = { updatedAt: z.string(), deletedAt: z.string().optional() };
 
 const category = z.enum([
@@ -93,6 +94,9 @@ export const serviceItemSchema: z.ZodType<ServiceItem> = z.object({
   firstDueMonths: z.number().positive().optional(),
   baseline: z
     .object({ date: isoDate, odometer: z.number(), source: z.enum(['purchase', 'entered']) })
+    .optional(),
+  seasonal: z
+    .object({ winterOn: monthDay, summerOn: monthDay, mounted: z.enum(['winter', 'summer']) })
     .optional(),
   enabled: z.boolean(),
   isCustom: z.boolean(),
