@@ -93,7 +93,7 @@ export function Settings() {
 
       <section class="card">
         <h2 class="section-title">Due-soon thresholds</h2>
-        <NumberInput label={`Miles (${vehicle.units})`} value={settings.dueSoonMiles} onChange={(v) => void repo.updateSettings({ dueSoonMiles: v ?? 0 })} />
+        <NumberInput label={`Distance (${vehicle.units})`} value={settings.dueSoonMiles} onChange={(v) => void repo.updateSettings({ dueSoonMiles: v ?? 0 })} />
         <NumberInput label="Days" value={settings.dueSoonDays} onChange={(v) => void repo.updateSettings({ dueSoonDays: v ?? 0 })} />
       </section>
 

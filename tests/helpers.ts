@@ -38,7 +38,7 @@ export function reading(date: ISODate, value: number, extra: Partial<OdometerRea
 
 export function input(over: Partial<DueInput> & { today: ISODate }): DueInput {
   return {
-    vehicle: { drivingStyle: 'normal' },
+    vehicle: { drivingStyle: 'normal', units: 'mi' },
     items: items(),
     records: [],
     readings: [],

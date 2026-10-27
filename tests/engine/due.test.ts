@@ -30,7 +30,7 @@ describe('acceptance: due engine', () => {
   it('switching to Severe shortens oil to 5,000 mi / 6 mo', () => {
     const base = input({ today: '2026-02-01', records: [record('2026-01-10', 45_000, ['oil'])] });
     const normal = find(computeDue(base), 'oil');
-    const severe = find(computeDue({ ...base, vehicle: { drivingStyle: 'severe' } }), 'oil');
+    const severe = find(computeDue({ ...base, vehicle: { drivingStyle: 'severe', units: 'mi' } }), 'oil');
     expect(normal.dueMiles).toBe(52_500);
     expect(severe.dueMiles).toBe(50_000);
     expect(severe.dueDate).toBe('2026-07-10');

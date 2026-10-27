@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkOdometer, DEFAULT_MILES_PER_DAY, estimateMileage } from '../../src/engine/mileage';
+import { checkOdometer, DEFAULT_KM_PER_DAY, DEFAULT_MILES_PER_DAY, defaultRatePerDay, estimateMileage } from '../../src/engine/mileage';
 
 describe('estimateMileage', () => {
   it('fits the pace by regression and extrapolates', () => {
@@ -19,6 +19,14 @@ describe('estimateMileage', () => {
     expect(e.rateSource).toBe('default');
     expect(e.ratePerDay).toBe(DEFAULT_MILES_PER_DAY);
     expect(e.miles).toBe(10_330);
+  });
+
+  it('uses a kilometre default for cars tracked in km', () => {
+    expect(defaultRatePerDay('km')).toBe(DEFAULT_KM_PER_DAY);
+    expect(defaultRatePerDay('mi')).toBe(DEFAULT_MILES_PER_DAY);
+    const e = estimateMileage([{ date: '2026-10-16', value: 10_000 }], '2026-10-26', defaultRatePerDay('km'));
+    expect(e.ratePerDay).toBe(44);
+    expect(e.miles).toBe(10_440);
   });
 
   it('uses the overall average when the 180-day window has fewer than 2 readings', () => {

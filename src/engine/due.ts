@@ -1,7 +1,7 @@
 import { addDays, addMonths, daysBetween } from '../core/dates';
 import type { Category, ISODate, OdometerReading, ServiceItem, ServiceRecord, Settings, Vehicle } from '../data/types';
 import { healthScore } from './health';
-import { estimateMileage, type MileageEstimate, type MileagePoint } from './mileage';
+import { defaultRatePerDay, estimateMileage, type MileageEstimate, type MileagePoint } from './mileage';
 
 export type Status = 'ok' | 'soon' | 'overdue' | 'inspect';
 
@@ -33,7 +33,7 @@ export interface ItemDue {
 
 export interface DueInput {
   today: ISODate;
-  vehicle: Pick<Vehicle, 'drivingStyle'>;
+  vehicle: Pick<Vehicle, 'drivingStyle' | 'units'>;
   items: readonly ServiceItem[];
   records: readonly ServiceRecord[];
   readings: readonly OdometerReading[];
@@ -150,7 +150,7 @@ export function computeDue(input: DueInput): DueResult {
     ...input.readings.filter((r) => !r.deletedAt).map((r) => ({ date: r.date, value: r.value, isCorrection: r.isCorrection })),
     ...records.map((r) => ({ date: r.date, value: r.odometer })),
   ];
-  const mileage = estimateMileage(points, today);
+  const mileage = estimateMileage(points, today, defaultRatePerDay(vehicle.units));
   const severe = vehicle.drivingStyle === 'severe';
 
   const items = sortByUrgency(

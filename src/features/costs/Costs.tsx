@@ -40,7 +40,7 @@ export function Costs() {
       </div>
       <div class="stat-grid two">
         <div class="card stat">
-          <span class="muted">Cost per {vehicle.units === 'mi' ? 'mile' : 'km'}</span>
+          <span class="muted">Maintenance cost per {vehicle.units === 'mi' ? 'mile' : 'km'}</span>
           <strong class="num">{c.costPerMile === null ? 'Not enough data' : `$${c.costPerMile.toFixed(3)}`}</strong>
         </div>
         <div class="card stat">
