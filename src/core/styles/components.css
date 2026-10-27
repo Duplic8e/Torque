@@ -281,3 +281,22 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .welcome-copy { font-size: var(--font-size-row); color: var(--color-chrome); text-align: center; max-width: 30ch; margin: 0 auto var(--space-5); }
 .welcome-actions { margin-top: auto; display: flex; flex-direction: column; align-items: stretch; gap: var(--space-1); padding-top: var(--space-5); }
 .welcome-actions .btn-text { min-height: 48px; }
+
+/* item sheet: one bar per limit */
+.item-remaining { font-size: var(--font-size-row); }
+.axis { display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'label value' 'bar bar'; gap: 6px var(--space-3); margin: var(--space-3) 0; }
+.axis-label { grid-area: label; font-size: var(--font-size-caption); font-weight: 500; color: var(--color-text-muted); }
+.axis-value { grid-area: value; font-size: var(--font-size-small); color: var(--color-chrome); }
+.axis .gauge { grid-area: bar; }
+.action-pair .btn { flex: 1; min-height: 50px; }
+
+/* service chips: due items first, with their lamp */
+.select-chip { display: inline-flex; align-items: center; gap: var(--space-2); }
+.select-chip .chip-dot { width: 7px; height: 7px; }
+.select-chip .dot-overdue { background: var(--color-overdue); box-shadow: 0 0 6px var(--color-overdue); }
+.select-chip .dot-soon { background: var(--color-soon); box-shadow: 0 0 6px var(--color-soon); }
+.select-chip[aria-pressed='true'] .chip-dot { box-shadow: none; }
+
+.sheet-hint { font-size: var(--font-size-small); color: var(--color-text-muted); margin: calc(var(--space-2) * -1) 0 var(--space-4); }
+.section-split { display: flex; justify-content: space-between; align-items: baseline; }
+.section-split .num { font-size: var(--font-size-small); color: var(--color-text-muted); font-weight: 500; }

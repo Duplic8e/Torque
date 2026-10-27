@@ -100,6 +100,20 @@ export function App() {
     return { repo, vehicle, items, records, readings, settings, today, due: computeDue({ today, vehicle, items, records, readings, settings }) };
   }, [raw, day]);
 
+  // Move installs made on the old default schedule to Mazda Canada's, once.
+  const vehicleId = raw && raw.vehicle ? raw.vehicle.id : null;
+  useEffect(() => {
+    if (!vehicleId) return;
+    void repo.upgradeSchedule(vehicleId).then((kept) => {
+      if (kept === null) return;
+      setToast({
+        message: kept.length
+          ? `Schedule updated to Mazda Canada. Your edits to ${kept.join(', ')} were kept.`
+          : 'Schedule updated to Mazda Canada’s maintenance schedule.',
+      });
+    });
+  }, [vehicleId]);
+
   const badgeEnabled = data?.settings.badgeEnabled ?? false;
   const attention = data ? attentionCount(data.due.items) : 0;
   useEffect(() => {

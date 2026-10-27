@@ -6,6 +6,8 @@ import { StatusChip } from '../../core/components/StatusChip';
 import { useAppData, useUi } from '../../core/context';
 import { fmtDateLong, fmtDateShort, fmtNum, remainingLabel } from '../../core/format';
 import type { ServiceItem } from '../../data/types';
+import { intervalUsage, type AxisUsage, type ItemDue } from '../../engine/due';
+import { ProgressBar } from '../../core/components/ProgressBar';
 
 /** "Every 7,500 mi or 12 months", naming only the limits the item has. */
 function intervalLabel(miles: number | undefined, months: number | undefined, units: string): string {
@@ -13,8 +15,28 @@ function intervalLabel(miles: number | undefined, months: number | undefined, un
   return parts.length ? `Every ${parts.join(' or ')}` : 'No interval set';
 }
 
+const months = (days: number) => Math.round(days / 30.44);
+
+/** One limit as a segmented bar: "6,200 of 8,000 km" or "2 of 6 months". */
+function AxisRow({ label, usage, unit, status }: { label: string; usage: AxisUsage; unit: 'distance' | 'time'; status: ItemDue['status'] }) {
+  const { used, total } = usage;
+  const text =
+    unit === 'time'
+      ? total < 60
+        ? `${used} of ${total} days`
+        : `${months(used)} of ${months(total)} months`
+      : `${fmtNum(used)} of ${fmtNum(total)}`;
+  return (
+    <div class="axis">
+      <span class="axis-label">{label}</span>
+      <ProgressBar progress={Math.min(1.2, used / total)} status={status} label={`${label}: ${text}`} />
+      <span class="axis-value num">{text}</span>
+    </div>
+  );
+}
+
 export function ItemSheet({ itemKey }: { itemKey: string }) {
-  const { items, due, records, vehicle, repo } = useAppData();
+  const { items, due, records, vehicle, repo, today } = useAppData();
   const ui = useUi();
   const item = items.find((i) => i.key === itemKey);
   const d = due.items.find((i) => i.key === itemKey);
@@ -33,9 +55,18 @@ export function ItemSheet({ itemKey }: { itemKey: string }) {
           {d && (
             <div class="card-flat">
               <div class="item-card-top">
-                <strong>{remainingLabel(d, vehicle.units)}</strong>
+                <strong class="item-remaining">{remainingLabel(d, vehicle.units)}</strong>
                 <StatusChip status={d.status} unknown={d.unknownBaseline} />
               </div>
+              {(() => {
+                const usage = intervalUsage(d, due.mileage.miles, today);
+                return (
+                  <>
+                    {usage.distance && <AxisRow label={`Distance (${vehicle.units})`} usage={usage.distance} unit="distance" status={d.status} />}
+                    {usage.time && <AxisRow label="Time" usage={usage.time} unit="time" status={d.status} />}
+                  </>
+                );
+              })()}
               <dl class="facts">
                 <dt>Next due</dt>
                 <dd>
@@ -61,7 +92,7 @@ export function ItemSheet({ itemKey }: { itemKey: string }) {
             {item.notes && (<><dt>Notes</dt><dd>{item.notes}</dd></>)}
           </dl>
 
-          <div class="row">
+          <div class="row action-pair">
             <button
               type="button"
               class="btn btn-primary"

@@ -67,6 +67,12 @@ export function LogServiceSheet({ mode, presetKeys, editId, duplicateId }: Props
     setWarning(null);
     setError('');
   };
+  // Services that need doing come first, in the dashboard's urgency order; the rest keep the schedule's order.
+  const rank = new Map(due.items.map((d, i) => [d.key, d.status === 'overdue' || d.status === 'soon' ? i : 1000 + i]));
+  const statusOf = (key: string) => due.items.find((d) => d.key === key)?.status;
+  const chipItems = items
+    .filter((i) => i.enabled || keys.includes(i.key))
+    .sort((a, b) => (rank.get(a.key) ?? 2000 + a.sortOrder) - (rank.get(b.key) ?? 2000 + b.sortOrder));
   const shops = [...new Set(records.map((r) => r.shop).filter((s): s is string => !!s))];
   const toggleKey = (key: string) => touch(setKeys)(keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key]);
 
@@ -140,11 +146,17 @@ export function LogServiceSheet({ mode, presetKeys, editId, duplicateId }: Props
         <fieldset class="field">
           <legend class="field-label">Services done</legend>
           <div class="chips">
-            {items.filter((i) => i.enabled || keys.includes(i.key)).map((i) => (
-              <button key={i.key} type="button" class="select-chip" aria-pressed={keys.includes(i.key)} onClick={() => toggleKey(i.key)}>
-                {i.name}
-              </button>
-            ))}
+            {chipItems.map((i) => {
+              const status = statusOf(i.key);
+              const lit = status === 'overdue' || status === 'soon';
+              return (
+                <button key={i.key} type="button" class="select-chip" aria-pressed={keys.includes(i.key)} onClick={() => toggleKey(i.key)}>
+                  {lit && <span class={`chip-dot dot-${status}`} aria-hidden="true" />}
+                  {i.name}
+                  {lit && <span class="visually-hidden">{status === 'overdue' ? ', overdue' : ', due soon'}</span>}
+                </button>
+              );
+            })}
           </div>
         </fieldset>
       )}

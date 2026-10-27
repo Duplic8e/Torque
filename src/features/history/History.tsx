@@ -70,7 +70,13 @@ export function History() {
 
       {groups.map((g) => (
         <section key={g.month}>
-          <h2 class="section-title">{fmtMonth(`${g.month}-01`)}</h2>
+          <h2 class="section-title section-split">
+            <span>{fmtMonth(`${g.month}-01`)}</span>
+            {/* only worth showing when it adds up more than one visit */}
+            {g.records.filter((r) => recordCost(r) > 0).length > 1 && (
+              <span class="num">{fmtMoney(g.records.reduce((sum, r) => sum + recordCost(r), 0))}</span>
+            )}
+          </h2>
           <div class="group">
             {g.records.map((r) => {
               const cost = recordCost(r);

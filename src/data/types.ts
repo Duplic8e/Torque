@@ -50,7 +50,7 @@ export interface OdometerReading extends Syncable {
 export interface Baseline {
   date: ISODate;
   odometer: number;
-  /** 'purchase' = "never serviced, car is new"; lets firstDueMiles apply. */
+  /** 'purchase' = "never serviced, car is new"; lets firstDueMiles and firstDueMonths apply. */
   source: 'purchase' | 'entered';
 }
 
@@ -66,6 +66,8 @@ export interface ServiceItem extends Syncable {
   severeMiles?: number;
   severeMonths?: number;
   firstDueMiles?: number;
+  /** Months to the first replacement on a new car, when it differs from the repeat interval. */
+  firstDueMonths?: number;
   /** Absent = "Not sure": treated as due now. */
   baseline?: Baseline;
   enabled: boolean;
@@ -108,6 +110,8 @@ export interface Settings {
   lastBackupAt?: string;
   recordsSinceBackup: number;
   schemaVersion: number;
+  /** Which built-in schedule the items were last upgraded to (1 = original US defaults, 2 = Mazda Canada). */
+  seedVersion?: number;
   /** The one-time "Review your schedule" prompt has been dismissed. */
   scheduleReviewed?: boolean;
   /** Show the count of items needing attention on the home-screen icon. */

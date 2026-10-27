@@ -3,6 +3,13 @@ import type { ISODate } from '../data/types';
 
 /** About 12,000 miles a year. */
 export const DEFAULT_MILES_PER_DAY = 33;
+/** About 16,000 km a year, the usual Canadian figure. */
+export const DEFAULT_KM_PER_DAY = 44;
+
+/** The assumed pace before there are enough readings, in the vehicle's units. */
+export function defaultRatePerDay(units: 'mi' | 'km'): number {
+  return units === 'km' ? DEFAULT_KM_PER_DAY : DEFAULT_MILES_PER_DAY;
+}
 export const REGRESSION_WINDOW_DAYS = 180;
 export const LOW_CONFIDENCE_AFTER_DAYS = 30;
 
@@ -49,18 +56,18 @@ function regressionSlope(points: readonly MileagePoint[]): number | null {
   return varX === 0 ? null : cov / varX;
 }
 
-export function estimateMileage(points: readonly MileagePoint[], today: ISODate): MileageEstimate {
+export function estimateMileage(points: readonly MileagePoint[], today: ISODate, defaultRate = DEFAULT_MILES_PER_DAY): MileageEstimate {
   const usable = points.filter((p) => p.date <= today);
   const last = latestPoint(usable);
   if (!last) {
-    return { miles: 0, ratePerDay: DEFAULT_MILES_PER_DAY, rateSource: 'default', lastReading: null, daysSinceReading: 0, isEstimated: false, confidence: 'none' };
+    return { miles: 0, ratePerDay: defaultRate, rateSource: 'default', lastReading: null, daysSinceReading: 0, isEstimated: false, confidence: 'none' };
   }
 
   // Corrections fix earlier typos, so they must not skew the pace.
   const real = usable.filter((p) => !p.isCorrection);
   const windowed = real.filter((p) => daysBetween(p.date, today) <= REGRESSION_WINDOW_DAYS);
 
-  let ratePerDay = DEFAULT_MILES_PER_DAY;
+  let ratePerDay = defaultRate;
   let rateSource: MileageEstimate['rateSource'] = 'default';
   const slope = regressionSlope(windowed);
   if (slope !== null && slope > 0) {

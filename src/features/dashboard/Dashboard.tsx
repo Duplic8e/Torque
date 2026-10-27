@@ -72,7 +72,7 @@ export function Dashboard() {
       {!settings.scheduleReviewed && (
         <section class="callout">
           <strong>Review your schedule</strong>
-          <p class="muted">The default intervals are typical Mazda figures. Check them against your maintenance booklet.</p>
+          <p class="muted">Intervals follow Mazda Canada’s Schedule 2 for the 2.5 Turbo. Brake fluid could not be confirmed, so check that one against your owner’s manual.</p>
           <div class="row">
             <a class="btn btn-secondary" href={hrefFor('schedule')}>Open schedule</a>
             <button type="button" class="btn-text" onClick={() => void repo.updateSettings({ scheduleReviewed: true })}>Dismiss</button>

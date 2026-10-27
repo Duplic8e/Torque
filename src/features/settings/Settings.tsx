@@ -88,12 +88,12 @@ export function Settings() {
           options={[{ value: 'normal', label: 'Normal' }, { value: 'severe', label: 'Severe' }]}
           onChange={(v) => void repo.updateVehicle(vehicle.id, { drivingStyle: v })}
         />
-        <p class="muted">Severe means towing, short trips, extreme heat or cold, or dusty roads. It shortens the severe-sensitive intervals.</p>
+        <p class="muted">The schedule is Mazda Canada’s Schedule 2, which already assumes Canadian winters and short trips. Severe only changes items where you have set severe intervals yourself.</p>
       </section>
 
       <section class="card">
         <h2 class="section-title">Due-soon thresholds</h2>
-        <NumberInput label={`Miles (${vehicle.units})`} value={settings.dueSoonMiles} onChange={(v) => void repo.updateSettings({ dueSoonMiles: v ?? 0 })} />
+        <NumberInput label={`Distance (${vehicle.units})`} value={settings.dueSoonMiles} onChange={(v) => void repo.updateSettings({ dueSoonMiles: v ?? 0 })} />
         <NumberInput label="Days" value={settings.dueSoonDays} onChange={(v) => void repo.updateSettings({ dueSoonDays: v ?? 0 })} />
       </section>
 

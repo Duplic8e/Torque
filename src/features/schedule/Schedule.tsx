@@ -1,7 +1,7 @@
 import { ProgressBar } from '../../core/components/ProgressBar';
 import { StatusChip } from '../../core/components/StatusChip';
 import { useAppData, useUi } from '../../core/context';
-import { remainingLabel } from '../../core/format';
+import { fmtDateShort, remainingLabel } from '../../core/format';
 import type { ItemDue, Status } from '../../engine/due';
 
 const GROUPS: { title: string; match: (s: Status) => boolean }[] = [
@@ -25,7 +25,10 @@ export function Schedule() {
       {!i.unknownBaseline && (
         <ProgressBar progress={i.progress} status={i.status} label={`${i.name}: ${Math.round(Math.min(1, i.progress) * 100)}% of interval used`} />
       )}
-      <span class="row-bottom">{remainingLabel(i, vehicle.units)}</span>
+      <span class="row-bottom">
+        <span>{remainingLabel(i, vehicle.units)}</span>
+        {i.projectedDate && !i.unknownBaseline && i.status !== 'overdue' && <span class="num">around {fmtDateShort(i.projectedDate)}</span>}
+      </span>
     </button>
   );
 

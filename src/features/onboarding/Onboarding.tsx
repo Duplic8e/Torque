@@ -32,7 +32,7 @@ export function Onboarding({ repo }: { repo: Repo }) {
   const [nickname, setNickname] = useState('CX-5');
   const [vin, setVin] = useState('');
   const [plate, setPlate] = useState('');
-  const [units, setUnits] = useState<Vehicle['units']>('mi');
+  const [units, setUnits] = useState<Vehicle['units']>('km');
   const [odometer, setOdometer] = useState<number>();
   const [style, setStyle] = useState<Vehicle['drivingStyle']>('normal');
   const [purchaseDate, setPurchaseDate] = useState(today);
@@ -146,7 +146,7 @@ export function Onboarding({ repo }: { repo: Repo }) {
             <p class="muted">Trim: Signature 2.5 Turbo</p>
             <TextInput label="VIN (optional)" value={vin} onChange={setVin} />
             <TextInput label="Plate (optional)" value={plate} onChange={setPlate} />
-            <Segmented label="Units" value={units} options={[{ value: 'mi', label: 'Miles' }, { value: 'km', label: 'Kilometres' }]} onChange={setUnits} />
+            <Segmented label="Units" value={units} options={[{ value: 'km', label: 'Kilometres' }, { value: 'mi', label: 'Miles' }]} onChange={setUnits} />
           </>
         )}
 

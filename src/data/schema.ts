@@ -90,6 +90,7 @@ export const serviceItemSchema: z.ZodType<ServiceItem> = z.object({
   severeMiles: z.number().positive().optional(),
   severeMonths: z.number().positive().optional(),
   firstDueMiles: z.number().positive().optional(),
+  firstDueMonths: z.number().positive().optional(),
   baseline: z
     .object({ date: isoDate, odometer: z.number(), source: z.enum(['purchase', 'entered']) })
     .optional(),
@@ -128,6 +129,7 @@ export const settingsSchema: z.ZodType<Settings> = z.object({
   schemaVersion: z.number().int(),
   scheduleReviewed: z.boolean().optional(),
   badgeEnabled: z.boolean().optional(),
+  seedVersion: z.number().int().optional(),
   updatedAt: z.string(),
 });
 
